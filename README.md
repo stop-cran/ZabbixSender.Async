@@ -21,4 +21,4 @@ Console.WriteLine(response.Info);    // e.g. "Processed 1 Failed 0 Total 1 Secon
 
 # Remarks
 
-Note, that in order for the request to be accepted, hosts like `MonitoredHost1` above, should be [configured](https://www.zabbix.com/documentation/4.0/manual/config/hosts/host). The same should do the items (like `trapper.item1` above). The item type should have [Zabbix trapper](https://www.zabbix.com/documentation/4.0/manual/config/items/itemtypes/trapper). Also the values passed (`12` above) should respect the type of information, configured for each item.
+Note, that in order for the request to be accepted, hosts like `MonitoredHost1` above, should be [configured](https://www.zabbix.com/documentation/4.0/manual/config/hosts/host). The same should be done for the items (like `trapper.item1` above). The item(s) type should be [Zabbix trapper](https://www.zabbix.com/documentation/4.0/manual/config/items/itemtypes/trapper). Also the values passed (`12` above) should respect the type of information, configured for each item.
