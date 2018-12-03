@@ -11,17 +11,5 @@ namespace ZabbixSender.Async
         public ProtocolException(string message, Exception innerException) :
             base($"Protocol error - {message}.", innerException)
         { }
-
-        public ProtocolException(string message, byte[] response) :
-            base($"Protocol error - {message}. See the whole response in Data property by Response key.")
-        {
-            Data.Add("Response", response);
-        }
-
-        public ProtocolException(string message, Exception innerException, byte[] response) :
-            base($"Protocol error - {message}. See the whole response in Data property by Response key.", innerException)
-        {
-            Data.Add("Response", response);
-        }
     }
 }

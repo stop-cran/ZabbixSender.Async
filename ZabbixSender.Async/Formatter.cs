@@ -4,6 +4,7 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -104,47 +105,43 @@ namespace ZabbixSender.Async
 
         public SenderResponse ReadResponse(Stream stream)
         {
-            int responseSize = Math.Max(bufferSize, 128);
-            var response = new byte[responseSize];
-            var count = stream.Read(response, 0, response.Length);
-            var begin = Array.IndexOf(response, (byte)'{');
-
-            if (count <= 0)
-                throw new ProtocolException("empty reponse received");
-
-            if (begin == -1)
-                throw new ProtocolException("start of Json ({) not found", response);
-
-            if (count >= responseSize)
-                throw new ProtocolException("the response is too big", response);
-
             try
             {
-                using (var ms = new MemoryStream(response, begin, count - begin))
-                {
-                    using (var reader = new StreamReader(ms, Encoding.ASCII))
-                    using (var jsonReader = new JsonTextReader(reader))
-                        return serializer.Deserialize<SenderResponse>(jsonReader);
-                }
+                var buffer = new byte[13];
+
+                stream.Read(buffer, 0, buffer.Length); // skip the length
+
+                if (ZabbixHeader.Zip(buffer, (x, y) => x != y).Any(b => b))
+                    throw new ProtocolException("the response has an incorrect header");
+
+                using (var reader = new StreamReader(stream, Encoding.ASCII))
+                using (var jsonReader = new JsonTextReader(reader))
+                    return serializer.Deserialize<SenderResponse>(jsonReader);
             }
             catch (JsonException ex)
             {
-                throw new ProtocolException("invalid response format", ex, response);
+                throw new ProtocolException("invalid response format", ex);
             }
         }
 
-        public async Task<SenderResponse> ReadResponseAsync(Stream stream,
-            CancellationToken cancellationToken)
+        public async Task<SenderResponse> ReadResponseAsync(Stream stream, CancellationToken cancellationToken)
         {
-            var response = new byte[1024];
-            var count = await stream.ReadAsync(response, 0, response.Length, cancellationToken);
-            var begin = Array.IndexOf(response, (byte)'{');
-
-            using (var ms = new MemoryStream(response, begin, count - begin))
+            try
             {
-                using (var reader = new StreamReader(ms, Encoding.ASCII))
+                var buffer = new byte[13];
+
+                await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken); // skip the length
+
+                if (ZabbixHeader.Zip(buffer, (x, y) => x != y).Any(b => b))
+                    throw new ProtocolException("the response has an incorrect header");
+
+                using (var reader = new StreamReader(stream, Encoding.ASCII))
                 using (var jsonReader = new JsonTextReader(reader))
                     return serializer.Deserialize<SenderResponse>(jsonReader);
+            }
+            catch (JsonException ex)
+            {
+                throw new ProtocolException("invalid response format", ex);
             }
         }
     }
