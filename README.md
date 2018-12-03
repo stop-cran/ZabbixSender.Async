@@ -14,11 +14,11 @@ PM> Install-Package ZabbixSender.Async
 
 ```C#
 var sender = new ZabbixSender.Async.Sender("192.168.0.10");
-var response = sender.Send("MonitoredHost1", "trapper.item1", "12");
+var response = await sender.Send("MonitoredHost1", "trapper.item1", "12");
 Console.WriteLine(reponse.Response); // "success" or "fail"
 Console.WriteLine(response.Info);    // e.g. "Processed 1 Failed 0 Total 1 Seconds spent 0.000253"
 ```
 
 # Remarks
 
-Note, that in order for the request to be accepted, hosts like `MonitoredHost1` above, should be [configured](https://www.zabbix.com/documentation/4.0/manual/config/hosts/host). The same should be done for the items (like `trapper.item1` above). The item(s) type should be [Zabbix trapper](https://www.zabbix.com/documentation/4.0/manual/config/items/itemtypes/trapper). Also the values passed (`12` above) should respect the type of information, configured for each item.
+In order for the request above to be successfully processed, the host `MonitoredHost1` should be [configured](https://www.zabbix.com/documentation/4.0/manual/config/hosts/host). The same should be [done](https://www.zabbix.com/documentation/4.0/manual/config/items/item) for the item `trapper.item1`. The item(s) type should be [Zabbix trapper](https://www.zabbix.com/documentation/4.0/manual/config/items/itemtypes/trapper). Also the value `12` should respect the type of information, configured for the item.
