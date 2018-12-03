@@ -14,7 +14,7 @@ namespace ZabbixSender.Async
 
         /// <summary>
         /// A key of the item to send.
-        /// Should belong to the specified host and have "Zabbix sender" type.
+        /// Should belong to the specified host and have "Zabbix trapper" type.
         /// </summary>
         public string Key { get; set; }
 
