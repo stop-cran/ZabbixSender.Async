@@ -1,16 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;net461</TargetFrameworks>
-    <Version>1.0.3</Version>
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+    <Version>1.0.4</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Copyright>Apache License 2.0 (stop-cran, 2018)</Copyright>
     <Authors>stop-cran &lt;stop-cran@list.ru&gt;</Authors>
     <Company>stop-cran &lt;stop-cran@list.ru&gt;</Company>
     <RepositoryUrl>https://github.com/stop-cran/ZabbixSender.Async</RepositoryUrl>
-    <PackageReleaseNotes>Added documentation XML.</PackageReleaseNotes>
-    <Description>The package provides a tool to send data to Zabbix in the same way as zabbix_sender tool. It implements Zabbix Sender Protocol 4.0.</Description>
+    <PackageReleaseNotes>Added .Net Standard 2.0.</PackageReleaseNotes>
+    <Description>A tool to send data to Zabbix in the same way as zabbix_sender tool. It implements Zabbix Sender Protocol 4.0.</Description>
     <DocumentationFile>ZabbixSender.Async.xml</DocumentationFile>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

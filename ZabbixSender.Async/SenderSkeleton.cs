@@ -27,10 +27,10 @@ namespace ZabbixSender.Async
             this.formatterFactory = formatterFactory;
         }
 
-        public Task<SenderResponse> Send(string host, string key, string value) =>
-            Send(host, key, value, CancellationToken.None);
+        public Task<SenderResponse> Send(params SendData[] data) =>
+            Send(data, CancellationToken.None);
 
-        public Task<SenderResponse> Send(string host, string key, string value, CancellationToken cancellationToken) =>
+        public Task<SenderResponse> Send(string host, string key, string value, CancellationToken cancellationToken = default) =>
             Send(new[]
             {
                 new SendData
@@ -41,13 +41,7 @@ namespace ZabbixSender.Async
                 }
             }, cancellationToken);
 
-        public Task<SenderResponse> Send(params SendData[] data) =>
-            Send(data, CancellationToken.None);
-
-        public Task<SenderResponse> Send(IEnumerable<SendData> data) =>
-            Send(data, CancellationToken.None);
-
-        public async Task<SenderResponse> Send(IEnumerable<SendData> data, CancellationToken cancellationToken)
+        public async Task<SenderResponse> Send(IEnumerable<SendData> data, CancellationToken cancellationToken = default)
         {
             using (var tcpClient = await tcpClientFactory(cancellationToken))
             using (var networkStream = tcpClient.GetStream())

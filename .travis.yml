@@ -1,0 +1,6 @@
+language: csharp
+mono: none
+dotnet: 2.0.0
+solution: ZabbixSender.Async.sln
+script:
+  - dotnet test ZabbixSender.Async.Tests

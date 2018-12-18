@@ -33,9 +33,9 @@ namespace ZabbixSender.Async
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
                 NullValueHandling = NullValueHandling.Ignore,
                 Converters =
-                                {
-                                    new UnixDateTimeConverter()
-                                }
+                {
+                    new UnixDateTimeConverter()
+                }
             }, bufferSize)
         { }
 
@@ -76,7 +76,7 @@ namespace ZabbixSender.Async
         }
 
         public async Task WriteRequestAsync(Stream stream, IEnumerable<SendData> data,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default)
         {
             using (var ms = new MemoryStream())
             {
@@ -124,7 +124,7 @@ namespace ZabbixSender.Async
             }
         }
 
-        public async Task<SenderResponse> ReadResponseAsync(Stream stream, CancellationToken cancellationToken)
+        public async Task<SenderResponse> ReadResponseAsync(Stream stream, CancellationToken cancellationToken = default)
         {
             try
             {
