@@ -260,3 +260,5 @@ paket-files/
 __pycache__/
 *.pyc
 /ZabbixSender.Async/ZabbixSender.Async.xml
+/tools
+/coverage.opencover.xml

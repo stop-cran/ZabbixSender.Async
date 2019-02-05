@@ -1,6 +1,16 @@
 language: csharp
 mono: none
-dotnet: 2.0.0
+dotnet: 2.1
 solution: ZabbixSender.Async.sln
+
+env:
+  - COVERALLS_REPO_TOKEN=zmU2UBHinK2yNIl7bA56pSRSGvkpc9v55
+
+install:
+  - dotnet tool install coverlet.console --tool-path tools
+  - dotnet tool install coveralls.net --tool-path tools
+  
 script:
   - dotnet test ZabbixSender.Async.Tests
+  - ./tools/coverlet ZabbixSender.Async.Tests/bin/Debug/netcoreapp2.1/ZabbixSender.Async.Tests.dll --target dotnet --targetargs "test ZabbixSender.Async.Tests/ZabbixSender.Async.Tests.csproj" -f opencover
+  - ./tools/csmacnz.Coveralls --opencover -i coverage.opencover.xml --useRelativePaths
