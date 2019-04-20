@@ -1,16 +1,18 @@
 language: csharp
 mono: none
 dotnet: 2.1
+dist: xenial
 solution: ZabbixSender.Async.sln
 
 env:
   - COVERALLS_REPO_TOKEN=zmU2UBHinK2yNIl7bA56pSRSGvkpc9v55
 
 install:
-  - dotnet tool install coverlet.console --tool-path tools
   - dotnet tool install coveralls.net --tool-path tools
   
 script:
-  - dotnet test ZabbixSender.Async.Tests
-  - ./tools/coverlet ZabbixSender.Async.Tests/bin/Debug/netcoreapp2.1/ZabbixSender.Async.Tests.dll --target dotnet --targetargs "test ZabbixSender.Async.Tests/ZabbixSender.Async.Tests.csproj" -f opencover
-  - ./tools/csmacnz.Coveralls --opencover -i coverage.opencover.xml --useRelativePaths
+  - dotnet test ZabbixSender.Async.Tests  -l "trx;LogFileName=test-results.trx" /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:ExcludeByFile=\"**/ZabbixSender.Async.Tests/*.cs\"
+  - REPO_COMMIT_AUTHOR=$(git show -s --pretty=format:"%cn")
+  - REPO_COMMIT_AUTHOR_EMAIL=$(git show -s --pretty=format:"%ce")
+  - REPO_COMMIT_MESSAGE=$(git show -s --pretty=format:"%s")
+  - ./tools/csmacnz.Coveralls --opencover -i ZabbixSender.Async.Tests/coverage.opencover.xml --useRelativePaths --commitId $TRAVIS_COMMIT --commitBranch $TRAVIS_BRANCH --jobId $TRAVIS_JOB_ID --serviceName travis-ci --commitAuthor "$REPO_COMMIT_AUTHOR" --commitEmail "$REPO_COMMIT_AUTHOR_EMAIL" --commitMessage "$REPO_COMMIT_MESSAGE"

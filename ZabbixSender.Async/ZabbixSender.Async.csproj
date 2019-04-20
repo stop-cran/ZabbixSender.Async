@@ -12,6 +12,7 @@
     <Description>A tool to send data to Zabbix in the same way as zabbix_sender tool. It implements Zabbix Sender Protocol 4.0.</Description>
     <DocumentationFile>ZabbixSender.Async.xml</DocumentationFile>
     <LangVersion>latest</LangVersion>
+    <PackageProjectUrl>https://github.com/stop-cran/ZabbixSender.Async</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
