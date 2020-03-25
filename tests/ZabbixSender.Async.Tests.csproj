@@ -21,7 +21,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\ZabbixSender.Async\ZabbixSender.Async.csproj" />
+    <ProjectReference Include="..\src\ZabbixSender.Async.csproj" />
   </ItemGroup>
 
 </Project>

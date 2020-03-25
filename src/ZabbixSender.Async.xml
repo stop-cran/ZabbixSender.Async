@@ -1,0 +1,284 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ZabbixSender.Async</name>
+    </assembly>
+    <members>
+        <member name="T:ZabbixSender.Async.Formatter">
+            <summary>
+            An auxiliary class for Zabbix sender protocol 4.4 request and response formatting.
+            See full specs at https://zabbix.org/wiki/Docs/protocols/zabbix_sender/4.4.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.Formatter.#ctor(System.Int32)">
+            <summary>
+            Initializes a new instance of the ZabbixSender.Async.Formatter class with custom JsonSerializerSettings.
+            </summary>
+            <param name="bufferSize">Stream buffer size.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.Formatter.#ctor(Newtonsoft.Json.JsonSerializerSettings,System.Int32)">
+            <summary>
+            Initializes a new instance of the ZabbixSender.Async.Formatter class.
+            </summary>
+            <param name="settings">Custom Json serialization settings.</param>
+            <param name="bufferSize">Stream buffer size.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.Formatter.WriteRequest(System.IO.Stream,System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData})">
+            <summary>
+            Write provided data items to the request stream.
+            </summary>
+            <param name="stream">Request stream.</param>
+            <param name="data">Data items to write.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.Formatter.WriteRequestAsync(System.IO.Stream,System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData},System.Threading.CancellationToken)">
+            <summary>
+            Write provided data items to the request stream.
+            </summary>
+            <param name="stream">A stream to write to.</param>
+            <param name="data">Data items to write.</param>
+            <param name="cancellationToken">A CancellationToken for the write operation.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.Formatter.ReadResponse(System.IO.Stream)">
+            <summary>
+            Read Zabbix server response from given stream.
+            </summary>
+            <param name="stream">A stream to read from.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.Formatter.ReadResponseAsync(System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Read Zabbix server response from given stream.
+            </summary>
+            <param name="stream">A stream to read from.</param>
+            <param name="cancellationToken">CancellationToken for the read operation.</param>
+            <returns></returns>
+        </member>
+        <member name="T:ZabbixSender.Async.IFormatter">
+            <summary>
+            An auxiliary interface which abstracts working with Zabbix sender protocol.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.IFormatter.ReadResponse(System.IO.Stream)">
+            <summary>
+            Read Zabbix server response from given stream.
+            </summary>
+            <param name="stream">A stream to read from.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.IFormatter.ReadResponseAsync(System.IO.Stream,System.Threading.CancellationToken)">
+            <summary>
+            Read Zabbix server response from given stream.
+            </summary>
+            <param name="stream">A stream to read from.</param>
+            <param name="cancellationToken">CancellationToken for the read operation.</param>
+            <returns></returns>
+        </member>
+        <member name="M:ZabbixSender.Async.IFormatter.WriteRequest(System.IO.Stream,System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData})">
+            <summary>
+            Write provided data items to the request stream.
+            </summary>
+            <param name="stream">Request stream.</param>
+            <param name="data">Data items to write.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.IFormatter.WriteRequestAsync(System.IO.Stream,System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData},System.Threading.CancellationToken)">
+            <summary>
+            Write provided data items to the request stream.
+            </summary>
+            <param name="stream">A stream to write to.</param>
+            <param name="data">Data items to write.</param>
+            <param name="cancellationToken">A CancellationToken for the write operation.</param>
+        </member>
+        <member name="T:ZabbixSender.Async.ISender">
+            <summary>
+            Zabbix data sender.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.ISender.Send(ZabbixSender.Async.SendData[])">
+            <summary>
+            Send an array of data items.
+            </summary>
+            <param name="data">Data items to send.</param>
+            <returns>Zabbix Trapper response.</returns>
+        </member>
+        <member name="M:ZabbixSender.Async.ISender.Send(System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Send a single data item for specified host.
+            </summary>
+            <param name="host"></param>
+            <param name="key">An item key (see https://www.zabbix.com/documentation/4.4/manual/config/items/item/key).</param>
+            <param name="value">An item value</param>
+            <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.ISender.Send(System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData},System.Threading.CancellationToken)">
+            <summary>
+            Send multiple data items.
+            </summary>
+            <param name="data">Data items to send</param>
+            <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        </member>
+        <member name="T:ZabbixSender.Async.ProtocolException">
+            <summary>
+            Represents an error working with Zabbix sender protocol.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.ProtocolException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of ZabbixSender.Async.ProtocolException with given error message.
+            </summary>
+            <param name="message">An error message.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.ProtocolException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of ZabbixSender.Async.ProtocolException with given error message and inner exception.
+            </summary>
+            <param name="message">An error message.</param>
+            <param name="innerException">An inner exception.</param>
+        </member>
+        <member name="T:ZabbixSender.Async.SendData">
+            <summary>
+            Represents a data frame to be sent to Zabbix.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SendData.Host">
+            <summary>
+            Host name to monitor. Should be configured in Zabbix.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SendData.Key">
+            <summary>
+            A key of the item to send.
+            Should belong to the specified host and have "Zabbix trapper" type.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SendData.Value">
+            <summary>
+            An item value.
+            Should be formatted in a way to respect the configured "type of information" of the item.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SendData.Clock">
+            <summary>
+            A timestamp for the provided value. Leave null for ongoing values.
+            </summary>
+        </member>
+        <member name="T:ZabbixSender.Async.Sender">
+            <summary>
+            A class to send data to Zabbix. Be sure, that all used host names and items are configured.
+            All the items should have type "Zabbix trapper" to support Zabbix sender data flow.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.Sender.#ctor(System.String,System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance of the ZabbixSender.Async.Sender class.
+            </summary>
+            <param name="zabbixServer">Host name or IP address of Zabbix server or proxy.</param>
+            <param name="port">Zabbix server port.</param>
+            <param name="timeout">Connect, send and receive timeout in milliseconds.</param>
+            <param name="bufferSize">Buffer size for stream reading and writing.</param>
+        </member>
+        <member name="P:ZabbixSender.Async.Sender.ZabbixServer">
+            <summary>
+            Host name or IP address of Zabbix server or proxy.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.Sender.Port">
+            <summary>
+            Zabbix server port
+            </summary>
+        </member>
+        <member name="T:ZabbixSender.Async.SenderResponse">
+            <summary>
+            Represents a response from Zabbix server on the data sent.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SenderResponse.Response">
+            <summary>
+            "success" in case of the request has succeeded.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SenderResponse.Info">
+            <summary>
+            Supplementary information. Can be parsed by ParseInfo() mwthod.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SenderResponse.IsSuccess">
+            <summary>
+            Whether the request has succeeded.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.SenderResponse.ParseInfo">
+            <summary>
+            Supplementary information in a structured view.
+            </summary>
+        </member>
+        <member name="T:ZabbixSender.Async.SenderResponseInfo">
+            <summary>
+            A structured view of Zabbix server response.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.SenderResponseInfo.#ctor(System.String)">
+            <summary>
+            Create a structured view of Zabbix server response by given string.
+            </summary>
+            <param name="info">An original info string.</param>
+        </member>
+        <member name="P:ZabbixSender.Async.SenderResponseInfo.Processed">
+            <summary>
+            Amount of successfully processed trapper items.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SenderResponseInfo.Failed">
+            <summary>
+            Amount of trapper items which have failed to process.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SenderResponseInfo.Total">
+            <summary>
+            Total amount of trapper items processed.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.SenderResponseInfo.TimeSpent">
+            <summary>
+            Time spent to process the request.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.SenderResponseInfo.ToString">
+            <summary>
+            Shows the original info string.
+            </summary>
+        </member>
+        <member name="T:ZabbixSender.Async.SenderSkeleton">
+            <summary>
+            A basic class for sending datato Zabbix, which allows custom setup for TcpClient and Formatter.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.SenderSkeleton.#ctor(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{System.Net.Sockets.TcpClient}},System.Func{ZabbixSender.Async.IFormatter})">
+            <summary>
+            Initializes a new instance of the ZabbixSender.Async.SenderSkeleton class.
+            </summary>
+            <param name="tcpClientFactory">An async factory delegate for TcpClient.</param>
+            <param name="formatterFactory">A factory delegate for the data formatter.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.SenderSkeleton.Send(ZabbixSender.Async.SendData[])">
+            <summary>
+            Send an array of data items.
+            </summary>
+            <param name="data">Data items to send.</param>
+            <returns>Zabbix Trapper response.</returns>
+        </member>
+        <member name="M:ZabbixSender.Async.SenderSkeleton.Send(System.String,System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Send a single data item for specified host.
+            </summary>
+            <param name="host"></param>
+            <param name="key">An item key (see https://www.zabbix.com/documentation/4.4/manual/config/items/item/key).</param>
+            <param name="value">An item value</param>
+            <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.SenderSkeleton.Send(System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData},System.Threading.CancellationToken)">
+            <summary>
+            Send multiple data items.
+            </summary>
+            <param name="data">Data items to send</param>
+            <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        </member>
+    </members>
+</doc>
