@@ -12,11 +12,12 @@ using System.Threading.Tasks;
 namespace ZabbixSender.Async
 {
     /// <summary>
-    /// An auxiliary class for Zabbix sender protocol 4.0 request and response formatting.
-    /// See full specs at https://zabbix.org/wiki/Docs/protocols/zabbix_sender/4.0.
+    /// An auxiliary class for Zabbix sender protocol 4.4 request and response formatting.
+    /// See full specs at https://zabbix.org/wiki/Docs/protocols/zabbix_sender/4.4.
     /// </summary>
     public class Formatter : IFormatter
     {
+        // See docs: https://www.zabbix.com/documentation/4.4/manual/appendix/protocols/header_datalen
         private static readonly byte[] ZabbixHeader = Encoding.ASCII.GetBytes("ZBXD\x01");
 
         private readonly int bufferSize;
@@ -50,6 +51,11 @@ namespace ZabbixSender.Async
             this.bufferSize = bufferSize;
         }
 
+        /// <summary>
+        /// Write provided data items to the request stream.
+        /// </summary>
+        /// <param name="stream">Request stream.</param>
+        /// <param name="data">Data items to write.</param>
         public void WriteRequest(Stream stream, IEnumerable<SendData> data)
         {
             using (var ms = new MemoryStream())
@@ -75,6 +81,12 @@ namespace ZabbixSender.Async
             }
         }
 
+        /// <summary>
+        /// Write provided data items to the request stream.
+        /// </summary>
+        /// <param name="stream">A stream to write to.</param>
+        /// <param name="data">Data items to write.</param>
+        /// <param name="cancellationToken">A CancellationToken for the write operation.</param>
         public async Task WriteRequestAsync(Stream stream, IEnumerable<SendData> data,
             CancellationToken cancellationToken = default)
         {
@@ -103,6 +115,10 @@ namespace ZabbixSender.Async
             }
         }
 
+        /// <summary>
+        /// Read Zabbix server response from given stream.
+        /// </summary>
+        /// <param name="stream">A stream to read from.</param>
         public SenderResponse ReadResponse(Stream stream)
         {
             try
@@ -124,6 +140,12 @@ namespace ZabbixSender.Async
             }
         }
 
+        /// <summary>
+        /// Read Zabbix server response from given stream.
+        /// </summary>
+        /// <param name="stream">A stream to read from.</param>
+        /// <param name="cancellationToken">CancellationToken for the read operation.</param>
+        /// <returns></returns>
         public async Task<SenderResponse> ReadResponseAsync(Stream stream, CancellationToken cancellationToken = default)
         {
             try

@@ -1,6 +1,10 @@
 name: .NET Core
 
-on: [push]
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   build:
@@ -8,10 +12,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 2.2.108
+        dotnet-version: 3.1.101
     - name: Build with dotnet
-      run: dotnet build -c Release -f netcoreapp2.1 && dotnet build -c Debug -f netcoreapp2.1 && dotnet test --no-build ZabbixSender.Async.Tests
+      run: dotnet build
+    - name: Test with dotnet
+      run: dotnet test
+    - name: Publish Nuget
+      uses: rohith/publish-nuget@v2
+      with:
+        PROJECT_FILE_PATH: src/ZabbixSender.Async.csproj
+        TAG_COMMIT: true
+        NUGET_KEY: ${{ secrets.NuGetAPIKey }}

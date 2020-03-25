@@ -27,9 +27,21 @@ namespace ZabbixSender.Async
             this.formatterFactory = formatterFactory;
         }
 
+        /// <summary>
+        /// Send an array of data items.
+        /// </summary>
+        /// <param name="data">Data items to send.</param>
+        /// <returns>Zabbix Trapper response.</returns>
         public Task<SenderResponse> Send(params SendData[] data) =>
             Send(data, CancellationToken.None);
 
+        /// <summary>
+        /// Send a single data item for specified host.
+        /// </summary>
+        /// <param name="host"></param>
+        /// <param name="key">An item key (see https://www.zabbix.com/documentation/4.4/manual/config/items/item/key).</param>
+        /// <param name="value">An item value</param>
+        /// <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
         public Task<SenderResponse> Send(string host, string key, string value, CancellationToken cancellationToken = default) =>
             Send(new[]
             {
@@ -41,6 +53,11 @@ namespace ZabbixSender.Async
                 }
             }, cancellationToken);
 
+        /// <summary>
+        /// Send multiple data items.
+        /// </summary>
+        /// <param name="data">Data items to send</param>
+        /// <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
         public async Task<SenderResponse> Send(IEnumerable<SendData> data, CancellationToken cancellationToken = default)
         {
             using (var tcpClient = await tcpClientFactory(cancellationToken))
