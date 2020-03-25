@@ -22,3 +22,5 @@ Console.WriteLine(response.Info);    // e.g. "Processed 1 Failed 0 Total 1 Secon
 # Remarks
 
 In order for the request above to be successfully processed, the host `MonitoredHost1` should be [configured](https://www.zabbix.com/documentation/4.4/manual/config/hosts/host). The same should be [done](https://www.zabbix.com/documentation/4.4/manual/config/items/item) for the item `trapper.item1`. The item(s) type should be [Zabbix trapper](https://www.zabbix.com/documentation/4.4/manual/config/items/itemtypes/trapper). Also the value `12` should respect the type of information, configured for the item.
+
+Try standalone out-of-the-box Zabbix server with [Docker](https://hub.docker.com/r/zabbix/zabbix-appliance).
