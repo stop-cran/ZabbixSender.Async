@@ -16,7 +16,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.101
+        dotnet-version: 5.0.100
     - name: Build with dotnet
       run: dotnet build
     - name: Test with dotnet
@@ -27,3 +27,9 @@ jobs:
         PROJECT_FILE_PATH: src/ZabbixSender.Async.csproj
         TAG_COMMIT: true
         NUGET_KEY: ${{ secrets.NuGetAPIKey }}
+    services:
+      zabbix:
+        image: zabbix/zabbix-appliance
+        ports:
+          - 8080:80
+          - 10051:10051
