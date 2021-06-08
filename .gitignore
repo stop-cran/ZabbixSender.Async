@@ -262,3 +262,5 @@ __pycache__/
 /ZabbixSender.Async/ZabbixSender.Async.xml
 /tools
 /coverage.opencover.xml
+/tests/coverage.info
+/tests/test-results.xml
