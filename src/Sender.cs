@@ -38,18 +38,20 @@ namespace ZabbixSender.Async
 
         private static Func<CancellationToken, Task<TcpClient>> CreateTcpClient(string zabbixServer, int port, int timeout, int bufferSize)
         {
-            var tcpClient = new TcpClient
-            {
-                SendTimeout = timeout,
-                ReceiveTimeout = timeout,
-                SendBufferSize = bufferSize,
-                ReceiveBufferSize = bufferSize
-            };
-
             return async cancellationToken =>
             {
-                await tcpClient.ConnectAsync(zabbixServer, port)
-                    .WithTimeout(timeout, cancellationToken);
+                var tcpClient = new TcpClient
+                {
+                    SendTimeout = timeout,
+                    ReceiveTimeout = timeout,
+                    SendBufferSize = bufferSize,
+                    ReceiveBufferSize = bufferSize
+                };
+                
+                var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                source.CancelAfter(timeout);
+
+                await tcpClient.ConnectAsync(zabbixServer, port, source.Token);
 
                 return tcpClient;
             };

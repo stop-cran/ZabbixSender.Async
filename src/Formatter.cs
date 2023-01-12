@@ -1,11 +1,9 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,22 +19,17 @@ namespace ZabbixSender.Async
         private static readonly byte[] ZabbixHeader = Encoding.ASCII.GetBytes("ZBXD\x01");
 
         private readonly int bufferSize;
-
-        private readonly JsonSerializer serializer;
+        private readonly JsonSerializerOptions _settings;
 
         /// <summary>
         /// Initializes a new instance of the ZabbixSender.Async.Formatter class with custom JsonSerializerSettings.
         /// </summary>
         /// <param name="bufferSize">Stream buffer size.</param>
         public Formatter(int bufferSize = 1024) :
-            this(new JsonSerializerSettings
+            this(new JsonSerializerOptions
             {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore,
-                Converters =
-                {
-                    new UnixDateTimeConverter()
-                }
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                IgnoreNullValues = true
             }, bufferSize)
         { }
 
@@ -45,10 +38,10 @@ namespace ZabbixSender.Async
         /// </summary>
         /// <param name="settings">Custom Json serialization settings.</param>
         /// <param name="bufferSize">Stream buffer size.</param>
-        public Formatter(JsonSerializerSettings settings, int bufferSize = 1024)
+        public Formatter(JsonSerializerOptions settings, int bufferSize = 1024)
         {
-            serializer = JsonSerializer.Create(settings);
             this.bufferSize = bufferSize;
+            this._settings = settings;
         }
 
         /// <summary>
@@ -60,16 +53,8 @@ namespace ZabbixSender.Async
         {
             using (var ms = new MemoryStream())
             {
-                using (var writer = new StreamWriter(ms, Encoding.ASCII, bufferSize, true))
-                using (var jsonWriter = new JsonTextWriter(writer))
-                    serializer.Serialize(
-                        jsonWriter,
-                        new
-                        {
-                            Request = "sender data",
-                            Data = data,
-                            Clock = DateTime.Now
-                        });
+                JsonSerializer.SerializeAsync(
+                        ms, new ZabbixDataMessage("sender data", data, DateTimeOffset.UtcNow), _settings).Wait();
 
                 var lengthBytes = BitConverter.GetBytes(ms.Length);
 
@@ -92,16 +77,8 @@ namespace ZabbixSender.Async
         {
             using (var ms = new MemoryStream())
             {
-                using (var writer = new StreamWriter(ms, Encoding.ASCII, bufferSize, true))
-                using (var jsonWriter = new JsonTextWriter(writer))
-                    serializer.Serialize(
-                        jsonWriter,
-                        new
-                        {
-                            Request = "sender data",
-                            Data = data,
-                            Clock = DateTime.Now
-                        });
+                await JsonSerializer.SerializeAsync(
+                    ms, new ZabbixDataMessage("sender data", data, DateTimeOffset.UtcNow), _settings);
 
                 var lengthBytes = BitConverter.GetBytes(ms.Length);
 
@@ -130,9 +107,7 @@ namespace ZabbixSender.Async
                 if (ZabbixHeader.Zip(buffer, (x, y) => x != y).Any(b => b))
                     throw new ProtocolException("the response has an incorrect header");
 
-                using (var reader = new StreamReader(stream, Encoding.ASCII))
-                using (var jsonReader = new JsonTextReader(reader))
-                    return serializer.Deserialize<SenderResponse>(jsonReader);
+                return JsonSerializer.DeserializeAsync<SenderResponse>(stream).Result;
             }
             catch (JsonException ex)
             {
@@ -156,10 +131,8 @@ namespace ZabbixSender.Async
 
                 if (ZabbixHeader.Zip(buffer, (x, y) => x != y).Any(b => b))
                     throw new ProtocolException("the response has an incorrect header");
-
-                using (var reader = new StreamReader(stream, Encoding.ASCII))
-                using (var jsonReader = new JsonTextReader(reader))
-                    return serializer.Deserialize<SenderResponse>(jsonReader);
+                
+                return await JsonSerializer.DeserializeAsync<SenderResponse>(stream);
             }
             catch (JsonException ex)
             {
