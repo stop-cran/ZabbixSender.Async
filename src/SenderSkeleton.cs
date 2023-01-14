@@ -9,7 +9,7 @@ namespace ZabbixSender.Async
     /// <summary>
     /// A basic class for sending datato Zabbix, which allows custom setup for TcpClient and Formatter.
     /// </summary>
-    public class SenderSkeleton : ISender
+    public class SenderSkeleton
     {
         private readonly Func<CancellationToken, Task<TcpClient>> tcpClientFactory;
         private readonly Func<IFormatter> formatterFactory;

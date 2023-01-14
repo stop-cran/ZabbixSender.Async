@@ -91,6 +91,11 @@
             Zabbix data sender.
             </summary>
         </member>
+        <member name="P:ZabbixSender.Async.ISender.ZabbixServer">
+            <summary>
+            The host name or IP address of Zabbix server or proxy.
+            </summary>
+        </member>
         <member name="M:ZabbixSender.Async.ISender.Send(ZabbixSender.Async.SendData[])">
             <summary>
             Send an array of data items.
