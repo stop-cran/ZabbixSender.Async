@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,7 +30,7 @@ namespace ZabbixSender.Async
             this(new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                IgnoreNullValues = true
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             }, bufferSize)
         { }
 
@@ -107,7 +108,7 @@ namespace ZabbixSender.Async
                 if (ZabbixHeader.Zip(buffer, (x, y) => x != y).Any(b => b))
                     throw new ProtocolException("the response has an incorrect header");
 
-                return JsonSerializer.DeserializeAsync<SenderResponse>(stream).Result;
+                return JsonSerializer.DeserializeAsync<SenderResponse>(stream, _settings).Result;
             }
             catch (JsonException ex)
             {
@@ -132,7 +133,7 @@ namespace ZabbixSender.Async
                 if (ZabbixHeader.Zip(buffer, (x, y) => x != y).Any(b => b))
                     throw new ProtocolException("the response has an incorrect header");
                 
-                return await JsonSerializer.DeserializeAsync<SenderResponse>(stream);
+                return await JsonSerializer.DeserializeAsync<SenderResponse>(stream, _settings, cancellationToken);
             }
             catch (JsonException ex)
             {
