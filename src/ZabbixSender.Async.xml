@@ -16,7 +16,7 @@
             </summary>
             <param name="bufferSize">Stream buffer size.</param>
         </member>
-        <member name="M:ZabbixSender.Async.Formatter.#ctor(Newtonsoft.Json.JsonSerializerSettings,System.Int32)">
+        <member name="M:ZabbixSender.Async.Formatter.#ctor(System.Text.Json.JsonSerializerOptions,System.Int32)">
             <summary>
             Initializes a new instance of the ZabbixSender.Async.Formatter class.
             </summary>
@@ -89,6 +89,11 @@
         <member name="T:ZabbixSender.Async.ISender">
             <summary>
             Zabbix data sender.
+            </summary>
+        </member>
+        <member name="P:ZabbixSender.Async.ISender.ZabbixServer">
+            <summary>
+            The host name or IP address of Zabbix server or proxy.
             </summary>
         </member>
         <member name="M:ZabbixSender.Async.ISender.Send(ZabbixSender.Async.SendData[])">

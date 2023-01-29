@@ -9,7 +9,7 @@ namespace ZabbixSender.Async
     /// A class to send data to Zabbix. Be sure, that all used host names and items are configured.
     /// All the items should have type "Zabbix trapper" to support Zabbix sender data flow.
     /// </summary>
-    public class Sender : SenderSkeleton
+    public class Sender : SenderSkeleton, ISender
     {
         /// <summary>
         /// Initializes a new instance of the ZabbixSender.Async.Sender class.
@@ -38,18 +38,20 @@ namespace ZabbixSender.Async
 
         private static Func<CancellationToken, Task<TcpClient>> CreateTcpClient(string zabbixServer, int port, int timeout, int bufferSize)
         {
-            var tcpClient = new TcpClient
-            {
-                SendTimeout = timeout,
-                ReceiveTimeout = timeout,
-                SendBufferSize = bufferSize,
-                ReceiveBufferSize = bufferSize
-            };
-
             return async cancellationToken =>
             {
-                await tcpClient.ConnectAsync(zabbixServer, port)
-                    .WithTimeout(timeout, cancellationToken);
+                var tcpClient = new TcpClient
+                {
+                    SendTimeout = timeout,
+                    ReceiveTimeout = timeout,
+                    SendBufferSize = bufferSize,
+                    ReceiveBufferSize = bufferSize
+                };
+                
+                var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                source.CancelAfter(timeout);
+
+                await tcpClient.ConnectAsync(zabbixServer, port, source.Token);
 
                 return tcpClient;
             };

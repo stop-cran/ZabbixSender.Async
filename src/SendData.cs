@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Text.Json.Serialization;
 
 namespace ZabbixSender.Async
 {
@@ -27,6 +29,7 @@ namespace ZabbixSender.Async
         /// <summary>
         /// A timestamp for the provided value. Leave null for ongoing values.
         /// </summary>
-        public DateTime? Clock { get; set; }
+        [JsonConverter(typeof(JsonUnixDateTime))]
+        public DateTimeOffset? Clock { get; set; }
     }
 }

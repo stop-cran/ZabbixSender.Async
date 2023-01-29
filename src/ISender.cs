@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +10,11 @@ namespace ZabbixSender.Async
     /// </summary>
     public interface ISender
     {
+        /// <summary>
+        /// The host name or IP address of Zabbix server or proxy.
+        /// </summary>
+        public String ZabbixServer { get; }
+
         /// <summary>
         /// Send an array of data items.
         /// </summary>
