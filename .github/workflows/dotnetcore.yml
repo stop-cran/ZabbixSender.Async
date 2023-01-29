@@ -32,11 +32,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./tests/coverage.info
     - name: Publish Nuget
-      uses: brandedoutcast/publish-nuget@v2.5.5
-      with:
-        PROJECT_FILE_PATH: src/ZabbixSender.Async.csproj
-        TAG_COMMIT: true
-        NUGET_KEY: ${{secrets.NUGETAPIKEY}}
+      run: dotnet build -c Release && dotnet pack -c Release -o out && dotnet nuget push ./out/*.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }} --skip-duplicate
     - name: Print test results
       uses: EnricoMi/publish-unit-test-result-action@v1
       if: always()
