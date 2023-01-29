@@ -1,19 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-    <Version>1.1.0</Version>
+    <TargetFramework>net6.0</TargetFramework>
+    <Version>1.2.0-rc2</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Copyright>Apache License 2.0 (stop-cran, 2018-2021)</Copyright>
+    <Copyright>Apache License 2.0 (stop-cran, 2018-2023)</Copyright>
     <Authors>stop-cran &lt;stop-cran@list.ru&gt;</Authors>
     <Company>stop-cran &lt;stop-cran@list.ru&gt;</Company>
     <RepositoryUrl>https://github.com/stop-cran/ZabbixSender.Async</RepositoryUrl>
-    <PackageReleaseNotes>Added .Net 5.</PackageReleaseNotes>
+    <PackageReleaseNotes>Added .Net 6.</PackageReleaseNotes>
     <Description>A tool to send data to Zabbix in the same way as zabbix_sender tool. It implements Zabbix Sender Protocol 4.0.</Description>
     <DocumentationFile>ZabbixSender.Async.xml</DocumentationFile>
     <LangVersion>latest</LangVersion>
     <PackageProjectUrl>https://github.com/stop-cran/ZabbixSender.Async</PackageProjectUrl>
     <PackageLicenseFile>license.txt</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -29,10 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\license.txt">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
+    <None Include="..\license.txt" Pack="true" PackagePath="\" />
+    <None Include="..\README.md" Link="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

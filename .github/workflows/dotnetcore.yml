@@ -16,7 +16,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.100
+        dotnet-version: 6.0.x
     - name: Build with dotnet
       run: dotnet build
     - name: Test with dotnet
@@ -32,11 +32,11 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./tests/coverage.info
     - name: Publish Nuget
-      uses: rohith/publish-nuget@v2
+      uses: brandedoutcast/publish-nuget@v2.5.5
       with:
         PROJECT_FILE_PATH: src/ZabbixSender.Async.csproj
         TAG_COMMIT: true
-        NUGET_KEY: ${{ secrets.NuGetAPIKey }}
+        NUGET_KEY: ${{secrets.NUGETAPIKEY}}
     - name: Print test results
       uses: EnricoMi/publish-unit-test-result-action@v1
       if: always()
