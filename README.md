@@ -15,7 +15,7 @@ PM> Install-Package ZabbixSender.Async
 ```C#
 var sender = new ZabbixSender.Async.Sender("192.168.0.10");
 var response = await sender.Send("MonitoredHost1", "trapper.item1", "12");
-Console.WriteLine(reponse.Response); // "success" or "fail"
+Console.WriteLine(response.Response); // "success" or "fail"
 Console.WriteLine(response.Info);    // e.g. "Processed 1 Failed 0 Total 1 Seconds spent 0.000253"
 ```
 
