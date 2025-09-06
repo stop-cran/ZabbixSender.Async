@@ -1,4 +1,4 @@
-# Overview [![NuGet](https://img.shields.io/nuget/v/ZabbixSender.Async.svg)](https://www.nuget.org/packages/ZabbixSender.Async) [![Actions Status](../../workflows/.NET%20Core/badge.svg)](../../actions) [![Coverage Status](https://coveralls.io/repos/github/stop-cran/ZabbixSender.Async/badge.svg?branch=master)](https://coveralls.io/github/stop-cran/ZabbixSender.Async?branch=master)
+# Overview [![NuGet](https://img.shields.io/nuget/v/ZabbixSender.Async.svg)](https://www.nuget.org/packages/ZabbixSender.Async) [![Actions Status](../../workflows/.NET%209/badge.svg)](../../actions) [![Coverage Status](https://coveralls.io/repos/github/stop-cran/ZabbixSender.Async/badge.svg?branch=master)](https://coveralls.io/github/stop-cran/ZabbixSender.Async?branch=master)
 
 The package provides a tool to send data to Zabbix in the same way as [zabbix_sender](https://www.zabbix.com/documentation/4.4/manual/concepts/sender) tool. It implements [Zabbix Sender Protocol 4.4](https://www.zabbix.com/documentation/4.4/manual/appendix/protocols/zabbix_sender).
 
