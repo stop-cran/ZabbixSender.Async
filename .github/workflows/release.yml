@@ -184,8 +184,8 @@ jobs:
             echo "::error::the OIDC exchange returned no key; nothing was published."
             exit 1
           fi
+          # Pushing the .nupkg also pushes the .snupkg next to it to the symbol server.
           dotnet nuget push "artifacts/ZabbixSender.Async.${version}.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
-          dotnet nuget push "artifacts/ZabbixSender.Async.${version}.snupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: GitHub release
         env:
