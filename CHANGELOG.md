@@ -7,7 +7,51 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
+## [1.4.0] - 2026-09-25
+
+The first stable release for .NET 10 and Zabbix 7.4. It contains everything in
+[1.4.0-preview.1](https://github.com/stop-cran/ZabbixSender.Async/releases/tag/v1.4.0-preview.1) and
+[1.4.0-preview.2](https://github.com/stop-cran/ZabbixSender.Async/releases/tag/v1.4.0-preview.2),
+and the fixes from the pre-release review listed at the end of this section.
+
+### Upgrading from 1.3.0
+
+- **The package targets .NET 10 (`net10.0`) only.** Applications still on .NET 9 should stay on
+  1.3.0. The public API is unchanged, and so are the request bytes on the wire. Integration tests
+  run against Zabbix 7.4 (latest stable) and 7.0 (LTS).
+- Some failures throw different exceptions. Code that catches `OperationCanceledException`, or
+  `Exception`, keeps working. See the README's
+  [Results and errors](https://github.com/stop-cran/ZabbixSender.Async/blob/v1.4.0/README.md#results-and-errors)
+  table:
+  - A timeout is a `TaskCanceledException` whose `InnerException` is a `TimeoutException`. Tell
+    a timeout from cancellation by that, not by the exception type.
+  - Cancellation by the caller's token is an `OperationCanceledException`, possibly a
+    `TaskCanceledException`, and carries the caller's token.
+  - A connection reset is an `IOException`, and a connection closed before a complete reply is a
+    `ProtocolException`, both at once. In 1.3.0 both were a `TaskCanceledException` after the
+    timeout.
+  - `ParseInfo()` and malformed replies throw only `ProtocolException`.
+  - The `Sender` constructor throws `ArgumentOutOfRangeException` for a `timeout` below -1.
+- A `timeout` of 0 or `Timeout.Infinite` (-1) means no limit. In 1.3.0 every call failed with
+  them. With `SenderSkeleton` and a custom connection factory, the `TcpClient`'s `ReceiveTimeout`
+  limits the whole reply, and 0 or -1 means no limit.
+- `new Formatter(null)` uses the default settings. In 1.3.0 it used PascalCase names, which
+  Zabbix rejects.
+- Packages are built and published by GitHub Actions from `v*` tags, with trusted publishing and
+  a build provenance attestation on the GitHub release asset.
+
+### Main fixes since 1.3.0
+
+- `Send` no longer adds about 50 ms to every call.
+- Trimmed, Native AOT and .NET 10 file-based apps (`dotnet run app.cs`) can send values, also
+  with custom `JsonSerializerOptions`.
+- The whole reply is subject to the timeout. A reply that stalled after its first bytes used to
+  block `Send` until the caller cancelled.
+- Response headers split across TCP segments are read correctly. Compressed and large-packet
+  responses are accepted.
+- The connection is disposed when connecting fails or times out.
+
+### Fixed since 1.4.0-preview.2
 
 - `new Formatter(JsonSerializerOptions)` works again with options that have no `TypeInfoResolver`,
   as in 1.3.0. In 1.4.0-preview.2 every call with such options threw `NotSupportedException`, in
@@ -18,12 +62,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - When the caller cancels, `OperationCanceledException.CancellationToken` is the caller's token.
   In 1.4.0-preview.2 it was an internal linked token.
 
-### Changed
+### Changed since 1.4.0-preview.2
 
-- `new Formatter(null)` uses the default settings. Before, it used PascalCase property names,
-  which Zabbix rejects by closing the connection.
+- `new Formatter(null)` uses the default settings, as described above.
 
-### Infrastructure
+### Infrastructure since 1.4.0-preview.2
 
 - Before attesting and pushing, the release workflow's publish job checks that the artifact holds
   exactly the packages named for the tag, and that their `.nuspec` files declare that id and
@@ -176,7 +219,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Targets .NET Core 3.1. Earlier versions targeted .NET Standard 2.0 and .NET Framework 4.6.1.
 - Implements, and is tested against, the Zabbix 4.4 sender protocol.
 
-[Unreleased]: https://github.com/stop-cran/ZabbixSender.Async/compare/v1.4.0-preview.2...HEAD
+[Unreleased]: https://github.com/stop-cran/ZabbixSender.Async/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/stop-cran/ZabbixSender.Async/releases/tag/v1.4.0
 [1.4.0-preview.2]: https://github.com/stop-cran/ZabbixSender.Async/releases/tag/v1.4.0-preview.2
 [1.4.0-preview.1]: https://github.com/stop-cran/ZabbixSender.Async/releases/tag/v1.4.0-preview.1
 [1.3.0]: https://www.nuget.org/packages/ZabbixSender.Async/1.3.0
