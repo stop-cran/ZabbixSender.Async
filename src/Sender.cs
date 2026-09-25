@@ -59,12 +59,15 @@ namespace ZabbixSender.Async
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(timeout, Timeout.Infinite);
 
+            // TcpClient passes the value to setsockopt as is; Linux rejects -1 with EINVAL, 0 means no limit everywhere.
+            var socketTimeout = timeout == Timeout.Infinite ? 0 : timeout;
+
             return async cancellationToken =>
             {
                 var tcpClient = new TcpClient
                 {
-                    SendTimeout = timeout,
-                    ReceiveTimeout = timeout,
+                    SendTimeout = socketTimeout,
+                    ReceiveTimeout = socketTimeout,
                     SendBufferSize = bufferSize,
                     ReceiveBufferSize = bufferSize
                 };

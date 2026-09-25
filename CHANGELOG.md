@@ -26,6 +26,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Cancellation by the caller's token still throws a plain `OperationCanceledException`.
 - The connection is disposed when connecting fails or times out. It used to leak.
 - A `timeout` of 0 means no limit, like `Timeout.Infinite`. Before, it made every call fail.
+- `Timeout.Infinite` (-1) works on Linux. Before, every `Send` threw `SocketException`
+  (invalid argument) there.
 - `ParseInfo()` throws `ProtocolException`, instead of `OverflowException` or
   `ArgumentNullException`, when `Info` is missing or has a count that doesn't fit in an `int`.
 
