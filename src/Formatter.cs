@@ -49,17 +49,38 @@ namespace ZabbixSender.Async
         /// <summary>
         /// Initializes a new instance of the ZabbixSender.Async.Formatter class.
         /// </summary>
-        /// <param name="settings">Custom JSON serialization settings. In trimmed and Native AOT applications, set
-        /// <see cref="JsonSerializerOptions.TypeInfoResolver"/> to a resolver that covers
-        /// <see cref="ZabbixDataMessage"/> and <see cref="SenderResponse"/>, for example a
-        /// <see cref="System.Text.Json.Serialization.JsonSerializerContext"/> with
-        /// <see cref="System.Text.Json.Serialization.JsonSerializableAttribute"/> for both types;
-        /// otherwise reading and writing throw <see cref="NotSupportedException"/>.</param>
+        /// <param name="settings">Custom JSON serialization settings. They replace the defaults, so keep
+        /// <c>PropertyNamingPolicy = JsonNamingPolicy.CamelCase</c>: without it, Zabbix closes the connection and
+        /// <see cref="ISender.Send(IEnumerable{SendData}, CancellationToken)"/> throws <see cref="ProtocolException"/>.
+        /// Also keep <c>DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull</c>: without it,
+        /// <c>"clock": null</c> is written for values without <see cref="SendData.Clock"/>, and Zabbix does not store
+        /// them: they count as failed, or, when every value in the request has it, are not counted at all. The
+        /// settings are copied. The built-in source-generated metadata for
+        /// <see cref="ZabbixDataMessage"/> and <see cref="SenderResponse"/> is added after any
+        /// <see cref="JsonSerializerOptions.TypeInfoResolver"/> they have, so they work in trimmed and Native AOT
+        /// applications too; a resolver of their own takes precedence. <see langword="null"/> means the default
+        /// settings.</param>
         /// <param name="bufferSize">Stream buffer size.</param>
         public Formatter(JsonSerializerOptions settings, int bufferSize = 1024)
         {
             this.bufferSize = bufferSize;
-            this._settings = settings;
+            this._settings = WithZabbixMetadata(settings);
+        }
+
+        // JsonSerializerOptions.GetTypeInfo, unlike JsonSerializer.Serialize(value, options), does not fall back to
+        // reflection when the options have no resolver; so options that worked with 1.3 would throw without this.
+        private static JsonSerializerOptions WithZabbixMetadata(JsonSerializerOptions settings)
+        {
+            if (settings is null || ReferenceEquals(settings, ZabbixJsonContext.Default.Options))
+                return ZabbixJsonContext.Default.Options;
+
+            var options = new JsonSerializerOptions(settings);
+
+            options.TypeInfoResolver = options.TypeInfoResolver is null
+                ? ZabbixJsonContext.Default
+                : JsonTypeInfoResolver.Combine(options.TypeInfoResolver, ZabbixJsonContext.Default);
+
+            return options;
         }
 
         /// <summary>
@@ -223,7 +244,7 @@ namespace ZabbixSender.Async
                     packet.UncompressedLength is { } uncompressedLength
                         ? Decompress(payload, uncompressedLength)
                         : payload,
-                    GetTypeInfo<SenderResponse>());
+                    GetTypeInfo<SenderResponse>()) ?? throw new ProtocolException("invalid response format");
             }
             catch (JsonException ex)
             {

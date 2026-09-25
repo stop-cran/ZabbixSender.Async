@@ -89,6 +89,11 @@ namespace ZabbixSender.Async
                         throw CreateTimeoutException(
                             $"Could not connect to Zabbix server {zabbixServer}:{port} within {timeout} ms", ex);
                     }
+                    catch (OperationCanceledException ex) when (
+                        cancellationToken.IsCancellationRequested && ex.CancellationToken != cancellationToken)
+                    {
+                        throw WithCallerToken(ex, cancellationToken);
+                    }
 
                     return tcpClient;
                 }

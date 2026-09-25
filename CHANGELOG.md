@@ -7,6 +7,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `new Formatter(JsonSerializerOptions)` works again with options that have no `TypeInfoResolver`,
+  as in 1.3.0. In 1.4.0-preview.2 every call with such options threw `NotSupportedException`, in
+  every application. The library's source-generated metadata is now added after the options' own
+  resolver, so custom options also work in trimmed and Native AOT apps. The options are copied,
+  so the caller's instance is no longer made read-only.
+- `Send` throws `ProtocolException` when the reply is JSON `null`. Before, it returned `null`.
+- When the caller cancels, `OperationCanceledException.CancellationToken` is the caller's token.
+  In 1.4.0-preview.2 it was an internal linked token.
+
+### Changed
+
+- `new Formatter(null)` uses the default settings. Before, it used PascalCase property names,
+  which Zabbix rejects by closing the connection.
+
+### Infrastructure
+
+- Before attesting and pushing, the release workflow's publish job checks that the artifact holds
+  exactly the packages named for the tag, and that their `.nuspec` files declare that id and
+  version. For a stable version, it checks again that the commit is on `master`.
+- The connect timeout and connect cancellation tests run on every platform, including Linux CI.
+  New tests cover cancelling a send that is stuck writing, and, against Zabbix, custom
+  `JsonSerializerOptions` and what Zabbix does with `"clock": null`.
+
 ## [1.4.0-preview.2] - 2026-09-25
 
 ### Fixed
@@ -20,14 +45,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The whole reply is subject to the timeout. A reply that stalled after its first bytes used to
   block `Send` until the caller cancelled.
 - If the server closes the connection before a complete reply, `Send` throws `ProtocolException`
-  at once. Before, it waited for the timeout.
+  at once. If the connection is reset, it throws `IOException` at once. Before, both ended in a
+  `TaskCanceledException` after the timeout.
 - Timeouts throw a `TaskCanceledException` whose `InnerException` is a `TimeoutException`. The
   message says whether connecting or waiting for the reply timed out, and names the address.
-  Cancellation by the caller's token still throws a plain `OperationCanceledException`.
+  Cancellation by the caller's token throws an `OperationCanceledException`, possibly a
+  `TaskCanceledException`, without a `TimeoutException` inner exception. In 1.3.0, cancelling
+  while waiting for the reply threw `TaskCanceledException`; catching `OperationCanceledException`
+  covers both.
 - The connection is disposed when connecting fails or times out. It used to leak.
 - A `timeout` of 0 means no limit, like `Timeout.Infinite`. Before, it made every call fail.
-- `Timeout.Infinite` (-1) works on Linux. Before, every `Send` threw `SocketException`
-  (invalid argument) there.
+- `Timeout.Infinite` (-1) works. Before, every `Send` failed: on Linux with `SocketException`
+  (invalid argument), and on Windows with `TaskCanceledException` about 50 ms after sending.
 - `ParseInfo()` throws `ProtocolException`, instead of `OverflowException` or
   `ArgumentNullException`, when `Info` is missing or has a count that doesn't fit in an `int`.
 
@@ -35,6 +64,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The `Sender` constructor throws `ArgumentOutOfRangeException` for a `timeout` below -1. Before,
   such a value failed on every `Send`.
+- `SenderSkeleton` with a custom connection factory: the `TcpClient`'s `ReceiveTimeout` limits the
+  whole reply, and 0 or -1 means waiting without limit. Before, 0 or -1 made `Send` throw
+  `TaskCanceledException` about 50 ms after sending.
 - Package metadata:
   - The licence is given as the `Apache-2.0` SPDX expression.
   - The description and tags are more specific.
@@ -87,8 +119,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - a missing protocol flag, or unknown flag bits
   - a declared length over the protocol's 1 GiB limit
   - invalid compressed data
-- Response buffers grow as data arrives. A header that declares a huge length no longer causes an
-  allocation of that size before any data is received.
+- Response buffers grow as data arrives, so a header that declares a huge length can't force a
+  large allocation.
 - Compressed responses (flag `0x02`) and large-packet responses (flag `0x04`) sent by Zabbix are
   now accepted.
 

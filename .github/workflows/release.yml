@@ -155,6 +155,59 @@ jobs:
           name: release
           path: artifacts
 
+      # The build job ran repository code, which could have packed another id or version under the
+      # expected file name, and nuget.org publishes whatever the nuspec declares. So the tag is
+      # checked against the nuspecs here, where no repository code runs, before anything is attested
+      # or pushed; and a stable version's commit is checked against master again.
+      - name: The packages must be the ones the tag names
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$expected" ]; then
+            echo "::error::the build job reported version $version, but the tag is $GITHUB_REF_NAME"
+            exit 1
+          fi
+          python3 - "$expected" <<'PY'
+          import pathlib, sys, zipfile, xml.etree.ElementTree as ET
+
+          def fail(message):
+              print(f"::error::{message}")
+              sys.exit(1)
+
+          expected = sys.argv[1]
+          found = sorted(p.name for p in pathlib.Path("artifacts").iterdir() if p.suffix in (".nupkg", ".snupkg"))
+          wanted = sorted(f"ZabbixSender.Async.{expected}.{ext}" for ext in ("nupkg", "snupkg"))
+          if found != wanted:
+              fail(f"expected exactly {wanted} in the artifact, found {found}")
+          for name in found:
+              with zipfile.ZipFile(pathlib.Path("artifacts") / name) as package:
+                  nuspecs = [n for n in package.namelist() if n.endswith(".nuspec") and "/" not in n]
+                  if len(nuspecs) != 1:
+                      fail(f"{name} has {len(nuspecs)} nuspec files at its root")
+                  metadata = ET.fromstring(package.read(nuspecs[0])).find("{*}metadata")
+              declared = (metadata.findtext("{*}id"), metadata.findtext("{*}version"))
+              if declared != ("ZabbixSender.Async", expected):
+                  fail(f"{name} declares {declared[0]} {declared[1]}, expected ZabbixSender.Async {expected}")
+              print(f"{name}: {declared[0]} {declared[1]}")
+          PY
+          case "$expected" in
+            *-*) ;;
+            *)
+              # "behind" or "identical": the tagged commit is master or one of its ancestors.
+              status=$(gh api "repos/$GITHUB_REPOSITORY/compare/master...$GITHUB_SHA" --jq .status)
+              case "$status" in
+                identical|behind) ;;
+                *)
+                  echo "::error::$expected is a stable version, but $GITHUB_SHA is not on master (compare: $status)."
+                  exit 1
+                  ;;
+              esac
+              ;;
+          esac
+
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.x'

@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Shouldly;
@@ -28,6 +31,9 @@ namespace ZabbixSender.Async.Tests
         private static readonly TimeSpan ReadyTimeout = TimeSpan.FromMinutes(3);
         private static readonly TimeSpan SyncTimeout = TimeSpan.FromSeconds(90);
         private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
+
+        // Sends are retried on errors, so a reply that times out after Zabbix stored the value would store it twice.
+        private const int SenderTimeout = 10_000;
 
         private readonly List<string> hostIds = new();
         private ZabbixApiClient api;
@@ -76,7 +82,7 @@ namespace ZabbixSender.Async.Tests
         {
             var (host, hostId) = await CreateHost("Monitored host");
             var itemId = await CreateItem(hostId, "item_key1", NumericUnsignedValue);
-            var sender = new Sender(ZabbixServer);
+            var sender = new Sender(ZabbixServer, timeout: SenderTimeout);
 
             var res = await SendWhenReady(sender, host, "item_key1", "123");
 
@@ -114,7 +120,7 @@ namespace ZabbixSender.Async.Tests
         {
             var (host, hostId) = await CreateHost("Rejected values host");
             await CreateItem(hostId, "known", NumericUnsignedValue);
-            var sender = new Sender(ZabbixServer);
+            var sender = new Sender(ZabbixServer, timeout: SenderTimeout);
 
             await SendWhenReady(sender, host, "known", "1");
 
@@ -167,7 +173,7 @@ namespace ZabbixSender.Async.Tests
                 ["delay"] = "1h"
             });
             await CreateItem(hostId, "ok", NumericUnsignedValue);
-            var sender = new Sender(ZabbixServer);
+            var sender = new Sender(ZabbixServer, timeout: SenderTimeout);
 
             await SendWhenReady(sender, host, "ok", "1");
 
@@ -192,7 +198,7 @@ namespace ZabbixSender.Async.Tests
         {
             var (host, hostId) = await CreateHost("Wrong type host");
             var itemId = await CreateItem(hostId, "numeric", NumericUnsignedValue);
-            var sender = new Sender(ZabbixServer);
+            var sender = new Sender(ZabbixServer, timeout: SenderTimeout);
 
             await SendWhenReady(sender, host, "numeric", "1");
 
@@ -226,7 +232,7 @@ namespace ZabbixSender.Async.Tests
             const string value = "Привет, мир! 你好 🌍 \"quoted\" back\\slash\ttab\nsecond line";
             var (host, hostId) = await CreateHost("Text host");
             var itemId = await CreateItem(hostId, "text", TextValue);
-            var sender = new Sender(ZabbixServer);
+            var sender = new Sender(ZabbixServer, timeout: SenderTimeout);
 
             var res = await SendWhenReady(sender, host, "text", value);
 
@@ -239,7 +245,7 @@ namespace ZabbixSender.Async.Tests
         {
             var (host, hostId) = await CreateHost("Large batch host");
             var itemId = await CreateItem(hostId, "batch", NumericUnsignedValue);
-            var sender = new Sender(ZabbixServer, timeout: 10_000);
+            var sender = new Sender(ZabbixServer, timeout: SenderTimeout);
 
             await SendWhenReady(sender, host, "batch", "0");
 
@@ -283,7 +289,7 @@ namespace ZabbixSender.Async.Tests
                 ["url"] = "http://127.0.0.1:9/",
                 ["delay"] = "1h"
             });
-            var sender = new Sender(ZabbixServer);
+            var sender = new Sender(ZabbixServer, timeout: SenderTimeout);
 
             var res = await SendWhenReady(sender, host, "http.trap", "42");
 
@@ -291,6 +297,63 @@ namespace ZabbixSender.Async.Tests
             res.ParseInfo().Processed.ShouldBe(1);
             (await WaitForHistory(itemId, NumericUnsignedValue, 1)).Select(r => r.Value).ShouldContain("42");
         }
+
+        // Pins the README's advice on custom JsonSerializerOptions. The options have no TypeInfoResolver, and the
+        // tests run with reflection-based JSON disabled.
+        [Test]
+        public async Task ShouldPushWithCustomJsonOptionsAndNotStoreValuesWithNullClock()
+        {
+            var (host, hostId) = await CreateHost("Custom JSON options host");
+            var itemId = await CreateItem(hostId, "custom", NumericUnsignedValue);
+            var camelCase = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var sender = CreateSenderWithOptions(new JsonSerializerOptions(camelCase)
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+            var nullClockSender = CreateSenderWithOptions(camelCase);
+
+            await SendWhenReady(sender, host, "custom", "1");
+
+            var allNullClock = await nullClockSender.Send(host, "custom", "2");
+
+            await TestContext.Out.WriteLineAsync($"All null clock: {allNullClock.Response} / {allNullClock.Info}");
+            allNullClock.IsSuccess.ShouldBeTrue();
+            allNullClock.ParseInfo().ShouldSatisfyAllConditions(
+                info => info.Processed.ShouldBe(0),
+                info => info.Failed.ShouldBe(0),
+                info => info.Total.ShouldBe(0));
+
+            var clock = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds());
+            var mixed = await nullClockSender.Send(
+                new SendData { Host = host, Key = "custom", Value = "3" },
+                new SendData { Host = host, Key = "custom", Value = "4", Clock = clock });
+
+            await TestContext.Out.WriteLineAsync($"Mixed null clock: {mixed.Response} / {mixed.Info}");
+            mixed.ParseInfo().ShouldSatisfyAllConditions(
+                info => info.Processed.ShouldBe(1),
+                info => info.Failed.ShouldBe(1),
+                info => info.Total.ShouldBe(2));
+
+            (await WaitForHistory(itemId, NumericUnsignedValue, 2)).Select(r => r.Value).ShouldBe(new[] { "4", "1" });
+        }
+
+        private static SenderSkeleton CreateSenderWithOptions(JsonSerializerOptions options) =>
+            new(async cancellationToken =>
+            {
+                var tcpClient = new TcpClient { ReceiveTimeout = SenderTimeout };
+
+                try
+                {
+                    await tcpClient.ConnectAsync(ZabbixServer, 10051, cancellationToken);
+
+                    return tcpClient;
+                }
+                catch
+                {
+                    tcpClient.Dispose();
+                    throw;
+                }
+            }, () => new Formatter(options));
 
         private async Task<(string Host, string HostId)> CreateHost(string name,
             IDictionary<string, object> overrides = null)
@@ -334,7 +397,7 @@ namespace ZabbixSender.Async.Tests
         }
 
         // The server picks up new hosts and items on the next configuration cache update.
-        private static Task<SenderResponse> SendWhenReady(ISender sender, string host, string key, string value) =>
+        private static Task<SenderResponse> SendWhenReady(SenderSkeleton sender, string host, string key, string value) =>
             Retry(
                 () => sender.Send(host, key, value, default),
                 r => r.ParseInfo().Processed == 1,

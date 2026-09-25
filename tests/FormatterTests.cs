@@ -177,6 +177,12 @@ namespace ZabbixSender.Async.Tests
         }
 
         [Test]
+        public async Task ShouldRejectNullResponse([Values] bool useAsync)
+        {
+            await Should.ThrowAsync<ProtocolException>(() => Read(useAsync, new MemoryStream(Packet(0x01, "null"))));
+        }
+
+        [Test]
         public async Task ShouldReadResponse([Values] bool useAsync)
         {
             var response = await Read(useAsync, new MemoryStream(Packet(0x01, SuccessResponse)));

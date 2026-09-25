@@ -28,9 +28,10 @@ Guidance for coding agents working on this repository. To *use* the package, rea
 dotnet build -c Release
 dotnet test -c Release --filter "TestCategory!=Integration"   # unit tests, no Zabbix needed
 
-docker compose up -d --wait                                   # Zabbix 7.4; ZABBIX_VERSION=7.0 for the LTS
+docker compose up -d --wait                                   # Zabbix 7.4
 dotnet test -c Release --filter "TestCategory=Integration"
 docker compose down -v
+# Another version: down -v first (the database is per version), then ZABBIX_VERSION=7.0 docker compose up -d --wait
 
 python tools/check-publication-triggers.py                    # needs pyyaml
 docker run --rm -v "${PWD}:/repo" -w /repo rhysd/actionlint:1.7.12 -no-color -oneline

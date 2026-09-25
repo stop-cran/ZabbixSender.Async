@@ -46,8 +46,11 @@ var response = await sender.Send(new[]
                    Clock = DateTimeOffset.UtcNow.AddMinutes(-1) }
 }, cancellationToken);
 
-var info = response.ParseInfo();
-Console.WriteLine($"{info.Processed} of {info.Total} processed, {info.Failed} failed");
+if (response.IsSuccess)
+{
+    var info = response.ParseInfo();
+    Console.WriteLine($"{info.Processed} of {info.Total} processed, {info.Failed} failed");
+}
 ```
 
 ## API at a glance
@@ -78,7 +81,7 @@ A `Send` call returns normally whenever the server replies, even if it rejects e
 | Some or all values rejected. Causes: unknown host or item key; disabled host or item; the item is not a trapper item; the sender's address is not in the item's *Allowed hosts*; the host accepts only encrypted connections. | `IsSuccess` is still `true`, and `ParseInfo().Failed` is above 0. The reply only has counts: it does not say which values failed or why. See [troubleshooting](#troubleshooting-failed-values). |
 | A value doesn't match the item's *Type of information*, for example text for a numeric item | Counted as **processed**, with `Failed` 0, but the value is not stored. The item becomes *Not supported*, with an error such as `Value of type "string" is not suitable for value type "Numeric (unsigned)"`. |
 | The server refused the whole request | `IsSuccess` is `false`, and `Info` has the reason. `ParseInfo()` throws `ProtocolException`. |
-| Nothing listens on the port, the host name doesn't resolve, or the network is unreachable | `SocketException` |
+| Nothing listens on the port, the host name doesn't resolve, or the network is unreachable | `SocketException`. On Windows, a refused connection is retried for about 2 seconds, so with a shorter `timeout` it ends as a connect timeout instead; see [Timeouts](#timeouts-and-cancellation). |
 | Connecting or waiting for the reply took longer than `timeout` | `TaskCanceledException`, whose `InnerException` is a `TimeoutException`. The message says which step timed out and the address. |
 | Your `CancellationToken` was cancelled | `OperationCanceledException`, possibly a `TaskCanceledException`, without a `TimeoutException` inner exception |
 | The connection was reset while sending or receiving | `IOException`, usually with a `SocketException` inner exception |
@@ -88,6 +91,10 @@ A `Send` call returns normally whenever the server replies, even if it rejects e
 A complete pattern:
 
 ```csharp
+using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
+using ZabbixSender.Async;
+
 try
 {
     var response = await sender.Send(data, cancellationToken);
@@ -182,7 +189,9 @@ When `Failed` is above 0:
 
 ## Trimming, Native AOT and file-based apps
 
-The library uses source-generated JSON serialization and is marked `IsAotCompatible`. It works in trimmed apps, in Native AOT apps, and in .NET 10 file-based apps (`dotnet run app.cs`), which disable reflection-based JSON. If you pass custom `JsonSerializerOptions` to `Formatter` in such apps, set their `TypeInfoResolver` to a `JsonSerializerContext` covering `ZabbixDataMessage` and `SenderResponse`.
+The library uses source-generated JSON serialization and is marked `IsAotCompatible`. It works in trimmed apps, in Native AOT apps, and in .NET 10 file-based apps (`dotnet run app.cs`), which disable reflection-based JSON. Custom `JsonSerializerOptions` passed to `Formatter` work there too: the library adds its source-generated metadata after their `TypeInfoResolver`, so a resolver of your own takes precedence.
+
+Custom options replace the defaults, so keep `PropertyNamingPolicy = JsonNamingPolicy.CamelCase` and `DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull`. Without camelCase names, Zabbix closes the connection and `Send` throws `ProtocolException`. Without `WhenWritingNull`, values without `Clock` are sent with `"clock": null`, and Zabbix does not store them. They count as failed or, when every value in the request has `"clock": null`, are not counted at all (`processed: 0; failed: 0; total: 0`).
 
 ## Running Zabbix locally
 
@@ -190,9 +199,10 @@ The repository's [compose.yaml](https://github.com/stop-cran/ZabbixSender.Async/
 
 ```shell
 docker compose up -d                        # Zabbix 7.4
-ZABBIX_VERSION=7.0 docker compose up -d     # or another version
 docker compose down -v                      # stop and delete the data
 ```
+
+To run another version, delete the data first, because the database is created for one version: `docker compose down -v`, then `ZABBIX_VERSION=7.0 docker compose up -d` (in PowerShell: `$env:ZABBIX_VERSION='7.0'; docker compose up -d`).
 
 To set up Zabbix in containers yourself, see the [official instructions](https://www.zabbix.com/documentation/7.4/en/manual/installation/containers).
 
@@ -207,14 +217,14 @@ This section is for coding agents and tools working in a project that uses the p
 
   `dotnet nuget locals global-packages --list` prints the global packages folder. It is `~/.nuget/packages` unless `NUGET_PACKAGES` overrides it.
 * **The version in use.** `dotnet list package --include-transitive` shows it, and so does `obj/project.assets.json`.
-* **Source code.** The source of version `X.Y.Z` is at `https://github.com/stop-cran/ZabbixSender.Async/tree/vX.Y.Z`. The `.nuspec` inside the package records the exact commit under `<repository commit="...">`. SourceLink and a symbol package (`.snupkg`) on nuget.org let debuggers step into the source.
+* **Source code.** The source of version `X.Y.Z` is at `https://github.com/stop-cran/ZabbixSender.Async/tree/vX.Y.Z`; tags exist from v1.4.0-preview.1. The `.nuspec` inside the package records the exact commit under `<repository commit="...">`, so for any version the source is at `https://github.com/stop-cran/ZabbixSender.Async/tree/<commit>`. SourceLink and a symbol package (`.snupkg`) on nuget.org let debuggers step into the source.
 * **Behaviour specification.** The tests are the most precise description of behaviour:
   * [SenderTests.cs](https://github.com/stop-cran/ZabbixSender.Async/blob/master/tests/SenderTests.cs): connections, timeouts, cancellation and errors, against a fake server
   * [IntegrationTests.cs](https://github.com/stop-cran/ZabbixSender.Async/blob/master/tests/IntegrationTests.cs): a real Zabbix server; which values are accepted or rejected, large batches, timestamps and Unicode
   * [FormatterTests.cs](https://github.com/stop-cran/ZabbixSender.Async/blob/master/tests/FormatterTests.cs): the wire format
   * [SenderResponseTests.cs](https://github.com/stop-cran/ZabbixSender.Async/blob/master/tests/SenderResponseTests.cs): parsing the reply
 * **Protocol.** See the [sender protocol](https://www.zabbix.com/documentation/7.4/en/manual/appendix/protocols/zabbix_sender) and the [header format](https://www.zabbix.com/documentation/7.4/en/manual/appendix/protocols/header_datalen).
-* **Provenance.** Every package since 1.4.0-preview.1 is built and published by GitHub Actions, with a build provenance attestation. To check a package: `gh attestation verify ZabbixSender.Async.X.Y.Z.nupkg --repo stop-cran/ZabbixSender.Async`.
+* **Provenance.** Every package since 1.4.0-preview.1 is built and published by GitHub Actions, with a build provenance attestation. The attestation covers the package as built, which is attached to the GitHub release. The copy on nuget.org, and so in the global packages folder, also carries nuget.org's repository signature, so its digest differs and it does not verify. To check a version: `gh release download vX.Y.Z --repo stop-cran/ZabbixSender.Async --pattern '*.nupkg'`, then `gh attestation verify ZabbixSender.Async.X.Y.Z.nupkg --repo stop-cran/ZabbixSender.Async`.
 * **Bugs and questions.** Open an issue at https://github.com/stop-cran/ZabbixSender.Async/issues. Include the package version, the Zabbix version and the `Response`/`Info` or exception.
 * **Changing this library.** Agents working on this repository itself should read [AGENTS.md](https://github.com/stop-cran/ZabbixSender.Async/blob/master/AGENTS.md).
 

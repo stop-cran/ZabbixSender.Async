@@ -25,12 +25,17 @@
             <summary>
             Initializes a new instance of the ZabbixSender.Async.Formatter class.
             </summary>
-            <param name="settings">Custom JSON serialization settings. In trimmed and Native AOT applications, set
-            <see cref="P:System.Text.Json.JsonSerializerOptions.TypeInfoResolver"/> to a resolver that covers
-            <see cref="T:ZabbixSender.Async.ZabbixDataMessage"/> and <see cref="T:ZabbixSender.Async.SenderResponse"/>, for example a
-            <see cref="T:System.Text.Json.Serialization.JsonSerializerContext"/> with
-            <see cref="T:System.Text.Json.Serialization.JsonSerializableAttribute"/> for both types;
-            otherwise reading and writing throw <see cref="T:System.NotSupportedException"/>.</param>
+            <param name="settings">Custom JSON serialization settings. They replace the defaults, so keep
+            <c>PropertyNamingPolicy = JsonNamingPolicy.CamelCase</c>: without it, Zabbix closes the connection and
+            <see cref="M:ZabbixSender.Async.ISender.Send(System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData},System.Threading.CancellationToken)"/> throws <see cref="T:ZabbixSender.Async.ProtocolException"/>.
+            Also keep <c>DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull</c>: without it,
+            <c>"clock": null</c> is written for values without <see cref="P:ZabbixSender.Async.SendData.Clock"/>, and Zabbix does not store
+            them: they count as failed, or, when every value in the request has it, are not counted at all. The
+            settings are copied. The built-in source-generated metadata for
+            <see cref="T:ZabbixSender.Async.ZabbixDataMessage"/> and <see cref="T:ZabbixSender.Async.SenderResponse"/> is added after any
+            <see cref="P:System.Text.Json.JsonSerializerOptions.TypeInfoResolver"/> they have, so they work in trimmed and Native AOT
+            applications too; a resolver of their own takes precedence. <see langword="null"/> means the default
+            settings.</param>
             <param name="bufferSize">Stream buffer size.</param>
         </member>
         <member name="M:ZabbixSender.Async.Formatter.WriteRequest(System.IO.Stream,System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData})">
@@ -120,11 +125,14 @@
             check <see cref="P:ZabbixSender.Async.SenderResponseInfo.Failed"/> from <see cref="M:ZabbixSender.Async.SenderResponse.ParseInfo"/>.
             </returns>
             <exception cref="T:System.Net.Sockets.SocketException">The connection failed, for example it was refused
-            or the host name could not be resolved.</exception>
+            or the host name could not be resolved.
+            Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+            instead.</exception>
             <exception cref="T:System.IO.IOException">The connection was reset or broken while sending the request or
             receiving the response. <see cref="P:System.Exception.InnerException"/> is usually a <see cref="T:System.Net.Sockets.SocketException"/>.</exception>
             <exception cref="T:System.Threading.Tasks.TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>.</exception>
+            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>. Tell a timeout from cancellation
+            by that, not by the exception type.</exception>
             <exception cref="T:ZabbixSender.Async.ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
             the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
             </exception>
@@ -143,12 +151,17 @@
             check <see cref="P:ZabbixSender.Async.SenderResponseInfo.Failed"/> from <see cref="M:ZabbixSender.Async.SenderResponse.ParseInfo"/>.
             </returns>
             <exception cref="T:System.Net.Sockets.SocketException">The connection failed, for example it was refused
-            or the host name could not be resolved.</exception>
+            or the host name could not be resolved.
+            Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+            instead.</exception>
             <exception cref="T:System.IO.IOException">The connection was reset or broken while sending the request or
             receiving the response. <see cref="P:System.Exception.InnerException"/> is usually a <see cref="T:System.Net.Sockets.SocketException"/>.</exception>
             <exception cref="T:System.Threading.Tasks.TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>.</exception>
-            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>. Tell a timeout from cancellation
+            by that, not by the exception type.</exception>
+            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+            <see cref="T:System.Threading.Tasks.TaskCanceledException"/>, but unlike a timeout its <see cref="P:System.Exception.InnerException"/> is not a
+            <see cref="T:System.TimeoutException"/>.</exception>
             <exception cref="T:ZabbixSender.Async.ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
             the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
             </exception>
@@ -164,12 +177,17 @@
             check <see cref="P:ZabbixSender.Async.SenderResponseInfo.Failed"/> from <see cref="M:ZabbixSender.Async.SenderResponse.ParseInfo"/>.
             </returns>
             <exception cref="T:System.Net.Sockets.SocketException">The connection failed, for example it was refused
-            or the host name could not be resolved.</exception>
+            or the host name could not be resolved.
+            Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+            instead.</exception>
             <exception cref="T:System.IO.IOException">The connection was reset or broken while sending the request or
             receiving the response. <see cref="P:System.Exception.InnerException"/> is usually a <see cref="T:System.Net.Sockets.SocketException"/>.</exception>
             <exception cref="T:System.Threading.Tasks.TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>.</exception>
-            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>. Tell a timeout from cancellation
+            by that, not by the exception type.</exception>
+            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+            <see cref="T:System.Threading.Tasks.TaskCanceledException"/>, but unlike a timeout its <see cref="P:System.Exception.InnerException"/> is not a
+            <see cref="T:System.TimeoutException"/>.</exception>
             <exception cref="T:ZabbixSender.Async.ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
             the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
             </exception>
@@ -379,11 +397,14 @@
             check <see cref="P:ZabbixSender.Async.SenderResponseInfo.Failed"/> from <see cref="M:ZabbixSender.Async.SenderResponse.ParseInfo"/>.
             </returns>
             <exception cref="T:System.Net.Sockets.SocketException">The connection failed, for example it was refused or the host name
-            could not be resolved.</exception>
+            could not be resolved.
+            Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+            instead.</exception>
             <exception cref="T:System.IO.IOException">The connection was reset or broken while sending the request or
             receiving the response. <see cref="P:System.Exception.InnerException"/> is usually a <see cref="T:System.Net.Sockets.SocketException"/>.</exception>
             <exception cref="T:System.Threading.Tasks.TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>.</exception>
+            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>. Tell a timeout from cancellation
+            by that, not by the exception type.</exception>
             <exception cref="T:ZabbixSender.Async.ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
             the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
             </exception>
@@ -402,12 +423,17 @@
             check <see cref="P:ZabbixSender.Async.SenderResponseInfo.Failed"/> from <see cref="M:ZabbixSender.Async.SenderResponse.ParseInfo"/>.
             </returns>
             <exception cref="T:System.Net.Sockets.SocketException">The connection failed, for example it was refused or the host name
-            could not be resolved.</exception>
+            could not be resolved.
+            Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+            instead.</exception>
             <exception cref="T:System.IO.IOException">The connection was reset or broken while sending the request or
             receiving the response. <see cref="P:System.Exception.InnerException"/> is usually a <see cref="T:System.Net.Sockets.SocketException"/>.</exception>
             <exception cref="T:System.Threading.Tasks.TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>.</exception>
-            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>. Tell a timeout from cancellation
+            by that, not by the exception type.</exception>
+            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+            <see cref="T:System.Threading.Tasks.TaskCanceledException"/>, but unlike a timeout its <see cref="P:System.Exception.InnerException"/> is not a
+            <see cref="T:System.TimeoutException"/>.</exception>
             <exception cref="T:ZabbixSender.Async.ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
             the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
             </exception>
@@ -423,12 +449,17 @@
             check <see cref="P:ZabbixSender.Async.SenderResponseInfo.Failed"/> from <see cref="M:ZabbixSender.Async.SenderResponse.ParseInfo"/>.
             </returns>
             <exception cref="T:System.Net.Sockets.SocketException">The connection failed, for example it was refused or the host name
-            could not be resolved.</exception>
+            could not be resolved.
+            Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+            instead.</exception>
             <exception cref="T:System.IO.IOException">The connection was reset or broken while sending the request or
             receiving the response. <see cref="P:System.Exception.InnerException"/> is usually a <see cref="T:System.Net.Sockets.SocketException"/>.</exception>
             <exception cref="T:System.Threading.Tasks.TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>.</exception>
-            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+            <see cref="P:System.Exception.InnerException"/> is a <see cref="T:System.TimeoutException"/>. Tell a timeout from cancellation
+            by that, not by the exception type.</exception>
+            <exception cref="T:System.OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+            <see cref="T:System.Threading.Tasks.TaskCanceledException"/>, but unlike a timeout its <see cref="P:System.Exception.InnerException"/> is not a
+            <see cref="T:System.TimeoutException"/>.</exception>
             <exception cref="T:ZabbixSender.Async.ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
             the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
             </exception>

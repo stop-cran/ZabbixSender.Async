@@ -44,11 +44,14 @@ namespace ZabbixSender.Async
         /// check <see cref="SenderResponseInfo.Failed"/> from <see cref="SenderResponse.ParseInfo"/>.
         /// </returns>
         /// <exception cref="SocketException">The connection failed, for example it was refused or the host name
-        /// could not be resolved.</exception>
+        /// could not be resolved.
+        /// Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+        /// instead.</exception>
         /// <exception cref="System.IO.IOException">The connection was reset or broken while sending the request or
         /// receiving the response. <see cref="Exception.InnerException"/> is usually a <see cref="System.Net.Sockets.SocketException"/>.</exception>
         /// <exception cref="TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>.</exception>
+        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>. Tell a timeout from cancellation
+        /// by that, not by the exception type.</exception>
         /// <exception cref="ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
         /// the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
         /// </exception>
@@ -68,12 +71,17 @@ namespace ZabbixSender.Async
         /// check <see cref="SenderResponseInfo.Failed"/> from <see cref="SenderResponse.ParseInfo"/>.
         /// </returns>
         /// <exception cref="SocketException">The connection failed, for example it was refused or the host name
-        /// could not be resolved.</exception>
+        /// could not be resolved.
+        /// Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+        /// instead.</exception>
         /// <exception cref="System.IO.IOException">The connection was reset or broken while sending the request or
         /// receiving the response. <see cref="Exception.InnerException"/> is usually a <see cref="System.Net.Sockets.SocketException"/>.</exception>
         /// <exception cref="TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>.</exception>
-        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>. Tell a timeout from cancellation
+        /// by that, not by the exception type.</exception>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+        /// <see cref="TaskCanceledException"/>, but unlike a timeout its <see cref="Exception.InnerException"/> is not a
+        /// <see cref="TimeoutException"/>.</exception>
         /// <exception cref="ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
         /// the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
         /// </exception>
@@ -98,12 +106,17 @@ namespace ZabbixSender.Async
         /// check <see cref="SenderResponseInfo.Failed"/> from <see cref="SenderResponse.ParseInfo"/>.
         /// </returns>
         /// <exception cref="SocketException">The connection failed, for example it was refused or the host name
-        /// could not be resolved.</exception>
+        /// could not be resolved.
+        /// Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+        /// instead.</exception>
         /// <exception cref="System.IO.IOException">The connection was reset or broken while sending the request or
         /// receiving the response. <see cref="Exception.InnerException"/> is usually a <see cref="System.Net.Sockets.SocketException"/>.</exception>
         /// <exception cref="TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
-        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>.</exception>
-        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>. Tell a timeout from cancellation
+        /// by that, not by the exception type.</exception>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+        /// <see cref="TaskCanceledException"/>, but unlike a timeout its <see cref="Exception.InnerException"/> is not a
+        /// <see cref="TimeoutException"/>.</exception>
         /// <exception cref="ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
         /// the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
         /// </exception>
@@ -132,9 +145,21 @@ namespace ZabbixSender.Async
                 throw CreateTimeoutException(
                     $"Zabbix server {tcpClient.Client.RemoteEndPoint} has not responded within {timeout} ms", ex);
             }
+            catch (OperationCanceledException ex) when (
+                cancellationToken.IsCancellationRequested && ex.CancellationToken != cancellationToken)
+            {
+                throw WithCallerToken(ex, cancellationToken);
+            }
         }
 
         internal static TaskCanceledException CreateTimeoutException(string message, Exception innerException) =>
             new(message, new TimeoutException(message, innerException));
+
+        // Operations get a linked token, so report the caller's own token in the exception, as HttpClient does.
+        internal static OperationCanceledException WithCallerToken(
+            OperationCanceledException exception, CancellationToken cancellationToken) =>
+            exception is TaskCanceledException
+                ? new TaskCanceledException(exception.Message, exception, cancellationToken)
+                : new OperationCanceledException(exception.Message, exception, cancellationToken);
     }
 }

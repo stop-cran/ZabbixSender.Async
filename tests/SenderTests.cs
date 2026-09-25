@@ -145,15 +145,18 @@ namespace ZabbixSender.Async.Tests
             ex.Message.ShouldContain("has not responded within 200 ms");
         }
 
-        [Test, Platform("Win", Reason = "Windows retries a refused connection for about 2 seconds, which lets the connect time out.")]
+        [Test]
         public async Task ShouldThrowTaskCanceledExceptionWithTimeoutWhenConnectTakesTooLong()
         {
-            var sender = new Sender("127.0.0.1", GetUnusedPort(), timeout: 200);
+            using var listener = await UnacceptedListener.Create();
+            var sender = new Sender("127.0.0.1", listener.Port, timeout: 200);
+            var stopwatch = Stopwatch.StartNew();
 
             var ex = (await CatchAsync(() => sender.Send("h", "k", "v"))).ShouldBeOfType<TaskCanceledException>();
 
+            stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5));
             ex.InnerException.ShouldBeOfType<TimeoutException>();
-            ex.Message.ShouldContain("Could not connect to Zabbix server 127.0.0.1:");
+            ex.Message.ShouldContain($"Could not connect to Zabbix server 127.0.0.1:{listener.Port} within 200 ms");
         }
 
         [Test]
@@ -184,18 +187,53 @@ namespace ZabbixSender.Async.Tests
             ex.InnerException.ShouldBeOfType<SocketException>().SocketErrorCode.ShouldBe(SocketError.ConnectionReset);
         }
 
-        [Test]
-        public async Task ShouldThrowOperationCanceledExceptionWhenCancelled()
+        [TestCase(30_000)]
+        [TestCase(0)]
+        public async Task ShouldThrowOperationCanceledExceptionWhenCancelled(int timeout)
         {
             await using var server = FakeZabbixServer.Silent();
-            var sender = new Sender("127.0.0.1", server.Port, timeout: 30_000);
+            var sender = new Sender("127.0.0.1", server.Port, timeout: timeout);
             using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
             var stopwatch = Stopwatch.StartNew();
 
             var ex = await CatchAsync(() => sender.Send("h", "k", "v", cts.Token));
 
-            ex.ShouldBeAssignableTo<OperationCanceledException>();
+            ex.ShouldBeAssignableTo<OperationCanceledException>().CancellationToken.ShouldBe(cts.Token);
             ex.InnerException.ShouldNotBeOfType<TimeoutException>();
+            stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(10));
+        }
+
+        [Test]
+        public async Task ShouldThrowOperationCanceledExceptionWhenCancelledWhileConnecting()
+        {
+            using var listener = await UnacceptedListener.Create();
+            var sender = new Sender("127.0.0.1", listener.Port, timeout: 30_000);
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+            var stopwatch = Stopwatch.StartNew();
+
+            var ex = await CatchAsync(() => sender.Send("h", "k", "v", cts.Token));
+
+            ex.ShouldBeAssignableTo<OperationCanceledException>().CancellationToken.ShouldBe(cts.Token);
+            ex.InnerException.ShouldNotBeOfType<TimeoutException>();
+            stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5));
+        }
+
+        [Test]
+        public async Task ShouldThrowOperationCanceledExceptionWhenCancelledWhileWriting()
+        {
+            await using var server = new FakeZabbixServer((_, _, ct) => Task.Delay(Timeout.Infinite, ct));
+            var sender = new Sender("127.0.0.1", server.Port, timeout: 30_000);
+            // Much more than the socket buffers hold, so the write stalls while the server reads nothing. Windows
+            // loopback may buffer it all, and then the cancellation arrives while waiting for the reply instead.
+            var data = Enumerable.Range(0, 200)
+                .Select(i => new SendData { Host = "h", Key = "k", Value = new string('x', 100_000) })
+                .ToArray();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            var stopwatch = Stopwatch.StartNew();
+
+            var ex = await CatchAsync(() => sender.Send(data, cts.Token));
+
+            ex.ShouldBeAssignableTo<OperationCanceledException>().CancellationToken.ShouldBe(cts.Token);
             stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(10));
         }
 

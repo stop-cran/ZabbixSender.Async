@@ -48,14 +48,73 @@ namespace ZabbixSender.Async.Tests
         }
 
         [Test]
-        public void CustomSettingsWithoutResolverShouldThrow()
+        public async Task CustomSettingsWithoutResolverShouldUseBuiltInMetadata([Values] bool useAsync)
         {
-            var formatter = new Formatter(new JsonSerializerOptions());
+            var settings = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
+            var payload = await WriteRequest(new Formatter(settings), useAsync);
+
+            payload.ShouldStartWith("{\"request\":\"sender data\",\"data\":[{\"host\":\"host1\",\"key\":\"key1\",\"value\":\"1\"}],\"clock\":");
+            settings.TypeInfoResolver.ShouldBeNull();
+            settings.IsReadOnly.ShouldBeFalse();
+        }
+
+        [Test]
+        public async Task CustomSettingsShouldKeepTheirNamingPolicy([Values] bool useAsync)
+        {
+            var payload = await WriteRequest(new Formatter(new JsonSerializerOptions()), useAsync);
+
+            payload.ShouldStartWith("{\"Request\":\"sender data\",\"Data\":[{\"Host\":\"host1\",\"Key\":\"key1\",\"Value\":\"1\",\"Clock\":null}],\"Clock\":");
+        }
+
+        [Test]
+        public async Task NullSettingsShouldMeanDefaults([Values] bool useAsync)
+        {
+            var payload = await WriteRequest(new Formatter(null), useAsync);
+
+            payload.ShouldStartWith("{\"request\":\"sender data\",\"data\":[{\"host\":\"host1\",\"key\":\"key1\",\"value\":\"1\"}],\"clock\":");
+        }
+
+        [Test]
+        public async Task CustomSettingsWithUnrelatedResolverShouldFallBackToBuiltInMetadata([Values] bool useAsync)
+        {
+            var formatter = new Formatter(new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                TypeInfoResolver = UnrelatedJsonContext.Default
+            });
+
+            using var stream = new MemoryStream(FakeZabbixServer.Packet(
+                "{\"response\":\"success\",\"info\":\"processed: 1; failed: 0; total: 1; seconds spent: 0.000055\"}"));
+
+            var response = useAsync ? await formatter.ReadResponseAsync(stream) : formatter.ReadResponse(stream);
+
+            response.IsSuccess.ShouldBeTrue();
+            (await WriteRequest(formatter, useAsync)).ShouldStartWith("{\"request\":\"sender data\"");
+        }
+
+        private static async Task<string> WriteRequest(Formatter formatter, bool useAsync)
+        {
+            var data = new[] { new SendData { Host = "host1", Key = "key1", Value = "1" } };
 
             using var stream = new MemoryStream();
 
-            Should.Throw<NotSupportedException>(() => formatter.WriteRequest(stream, new[] { new SendData() }));
+            if (useAsync)
+                await formatter.WriteRequestAsync(stream, data);
+            else
+                formatter.WriteRequest(stream, data);
+
+            return Encoding.UTF8.GetString(stream.ToArray(), 13, (int)stream.Length - 13);
         }
+    }
+
+    [JsonSerializable(typeof(Version))]
+    internal partial class UnrelatedJsonContext : JsonSerializerContext
+    {
     }
 
     [JsonSourceGenerationOptions(

@@ -29,10 +29,14 @@ They also check which values Zabbix rejects, for example for disabled items or a
 [compose.yaml](compose.yaml) starts Zabbix with PostgreSQL:
 
 ```shell
-docker compose up -d                       # Zabbix 7.4; set ZABBIX_VERSION=7.0 for the LTS
+docker compose up -d                       # Zabbix 7.4
 dotnet test                                # all tests; waits up to 3 minutes for Zabbix to start
 docker compose down -v
 ```
+
+To test against another version, such as the 7.0 LTS, start from an empty database, because it is
+created for one version: `docker compose down -v`, then `ZABBIX_VERSION=7.0 docker compose up -d`
+(in PowerShell: `$env:ZABBIX_VERSION='7.0'; docker compose up -d`).
 
 The tests use these environment variables:
 
@@ -101,20 +105,26 @@ The **publish** job runs in the `nuget` environment and is the only job with an 
 does not check out or build anything. It:
 
 1. Downloads the artifact, which fails if its digest doesn't match the upload.
-2. Records a build provenance attestation.
-3. Exchanges the OIDC token for a short-lived nuget.org key, and pushes the `.nupkg` and `.snupkg`.
-4. Creates a GitHub release. The release is marked as a prerelease when the version has a `-`
+2. Checks, without running repository code, that the artifact holds exactly the `.nupkg` and
+   `.snupkg` named for the tag, that their `.nuspec` files declare `ZabbixSender.Async` and the
+   tag's version, and that a stable version's commit is on `master`.
+3. Records a build provenance attestation.
+4. Exchanges the OIDC token for a short-lived nuget.org key, and pushes the `.nupkg` and `.snupkg`.
+5. Creates a GitHub release. The release is marked as a prerelease when the version has a `-`
    suffix.
 
 The push uses `--skip-duplicate`. If the publish job fails, use *Re-run failed jobs* within the
 artifact's 7-day retention: the job publishes the same files the build job verified. Re-running the
 whole workflow rebuilds the package, so the attestation would describe a rebuilt file rather than the
-one already on nuget.org. nuget.org never lets a published version be replaced. To fix a bad
+one already published. nuget.org never lets a published version be replaced. To fix a bad
 release, unlist it on nuget.org and release a new version.
 
-To verify that a downloaded package was built by this workflow:
+To verify that a package was built by this workflow, download it from the GitHub release. The copy
+on nuget.org, and so in the global packages folder, also carries nuget.org's repository signature,
+so its digest differs and it does not verify.
 
 ```shell
+gh release download vX.Y.Z --repo stop-cran/ZabbixSender.Async --pattern '*.nupkg'
 gh attestation verify ZabbixSender.Async.X.Y.Z.nupkg --repo stop-cran/ZabbixSender.Async
 ```
 
