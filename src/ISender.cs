@@ -6,36 +6,91 @@ using System.Threading.Tasks;
 namespace ZabbixSender.Async
 {
     /// <summary>
-    /// Zabbix data sender.
+    /// Sends values to Zabbix trapper items. <see cref="Sender"/> implements it; depend on this interface
+    /// to register the sender in a dependency injection container or to replace it with a fake in tests.
     /// </summary>
     public interface ISender
     {
         /// <summary>
-        /// The host name or IP address of Zabbix server or proxy.
+        /// The host name or IP address of the Zabbix server or proxy.
         /// </summary>
         public String ZabbixServer { get; }
 
         /// <summary>
-        /// Send an array of data items.
+        /// Sends one or more values in a single request.
         /// </summary>
-        /// <param name="data">Data items to send.</param>
-        /// <returns>Zabbix Trapper response.</returns>
+        /// <param name="data">The values to send.</param>
+        /// <returns>
+        /// The server response. The call succeeds even if the server rejects some or all values:
+        /// check <see cref="SenderResponseInfo.Failed"/> from <see cref="SenderResponse.ParseInfo"/>.
+        /// </returns>
+        /// <exception cref="System.Net.Sockets.SocketException">The connection failed, for example it was refused
+        /// or the host name could not be resolved.
+        /// Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+        /// instead.</exception>
+        /// <exception cref="System.IO.IOException">The connection was reset or broken while sending the request or
+        /// receiving the response. <see cref="Exception.InnerException"/> is usually a <see cref="System.Net.Sockets.SocketException"/>.</exception>
+        /// <exception cref="TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
+        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>. Tell a timeout from cancellation
+        /// by that, not by the exception type.</exception>
+        /// <exception cref="ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
+        /// the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
+        /// </exception>
         Task<SenderResponse> Send(params SendData[] data);
 
         /// <summary>
-        /// Send a single data item for specified host.
+        /// Sends a single value.
         /// </summary>
-        /// <param name="host"></param>
-        /// <param name="key">An item key (see https://www.zabbix.com/documentation/4.4/manual/config/items/item/key).</param>
-        /// <param name="value">An item value</param>
-        /// <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        /// <param name="host">The technical name of the host in Zabbix, not its visible name.</param>
+        /// <param name="key">The key of a trapper item on that host
+        /// (see https://www.zabbix.com/documentation/7.4/en/manual/config/items/item/key).</param>
+        /// <param name="value">The value, formatted to match the item's type of information.</param>
+        /// <param name="cancellationToken">Cancels connecting, sending and waiting for the response.</param>
+        /// <returns>
+        /// The server response. The call succeeds even if the server rejects the value:
+        /// check <see cref="SenderResponseInfo.Failed"/> from <see cref="SenderResponse.ParseInfo"/>.
+        /// </returns>
+        /// <exception cref="System.Net.Sockets.SocketException">The connection failed, for example it was refused
+        /// or the host name could not be resolved.
+        /// Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+        /// instead.</exception>
+        /// <exception cref="System.IO.IOException">The connection was reset or broken while sending the request or
+        /// receiving the response. <see cref="Exception.InnerException"/> is usually a <see cref="System.Net.Sockets.SocketException"/>.</exception>
+        /// <exception cref="TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
+        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>. Tell a timeout from cancellation
+        /// by that, not by the exception type.</exception>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+        /// <see cref="TaskCanceledException"/>, but unlike a timeout its <see cref="Exception.InnerException"/> is not a
+        /// <see cref="TimeoutException"/>.</exception>
+        /// <exception cref="ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
+        /// the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
+        /// </exception>
         Task<SenderResponse> Send(string host, string key, string value, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Send multiple data items.
+        /// Sends one or more values in a single request.
         /// </summary>
-        /// <param name="data">Data items to send</param>
-        /// <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        /// <param name="data">The values to send.</param>
+        /// <param name="cancellationToken">Cancels connecting, sending and waiting for the response.</param>
+        /// <returns>
+        /// The server response. The call succeeds even if the server rejects some or all values:
+        /// check <see cref="SenderResponseInfo.Failed"/> from <see cref="SenderResponse.ParseInfo"/>.
+        /// </returns>
+        /// <exception cref="System.Net.Sockets.SocketException">The connection failed, for example it was refused
+        /// or the host name could not be resolved.
+        /// Windows retries a refused connection for about 2 seconds, so with a shorter timeout it ends as a timeout
+        /// instead.</exception>
+        /// <exception cref="System.IO.IOException">The connection was reset or broken while sending the request or
+        /// receiving the response. <see cref="Exception.InnerException"/> is usually a <see cref="System.Net.Sockets.SocketException"/>.</exception>
+        /// <exception cref="TaskCanceledException">Connecting or waiting for the response took longer than the timeout.
+        /// <see cref="Exception.InnerException"/> is a <see cref="TimeoutException"/>. Tell a timeout from cancellation
+        /// by that, not by the exception type.</exception>
+        /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled. It may be a
+        /// <see cref="TaskCanceledException"/>, but unlike a timeout its <see cref="Exception.InnerException"/> is not a
+        /// <see cref="TimeoutException"/>.</exception>
+        /// <exception cref="ProtocolException">The reply is not a valid Zabbix sender protocol response, for example
+        /// the port does not belong to a Zabbix trapper, or the connection closed before a complete response arrived.
+        /// </exception>
         Task<SenderResponse> Send(IEnumerable<SendData> data, CancellationToken cancellationToken = default);
     }
 }

@@ -1,32 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Version>1.3.0</Version>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Copyright>Apache License 2.0 (stop-cran, 2018-2025)</Copyright>
+    <TargetFramework>net10.0</TargetFramework>
+    <Version>1.4.0</Version>
+    <Copyright>Copyright © 2018-2026 stop-cran</Copyright>
     <Authors>stop-cran &lt;stop-cran@list.ru&gt;</Authors>
     <Company>stop-cran &lt;stop-cran@list.ru&gt;</Company>
     <RepositoryUrl>https://github.com/stop-cran/ZabbixSender.Async</RepositoryUrl>
-    <PackageReleaseNotes>Added .Net 9.</PackageReleaseNotes>
-    <Description>A tool to send data to Zabbix in the same way as zabbix_sender tool. It implements Zabbix Sender Protocol 4.0.</Description>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>See https://github.com/stop-cran/ZabbixSender.Async/blob/v$(Version)/CHANGELOG.md</PackageReleaseNotes>
+    <Description>Async .NET client for the Zabbix sender (trapper) protocol: pushes values to Zabbix trapper items, like the zabbix_sender utility. Sends many values in one request, with optional timestamps, timeouts and cancellation, and returns the server's processed and failed counts. Tested with Zabbix 7.0 LTS and 7.4. No dependencies; trimming and Native AOT compatible. The README covers setup, error handling and troubleshooting; XML docs and SourceLink are included.</Description>
     <DocumentationFile>ZabbixSender.Async.xml</DocumentationFile>
     <LangVersion>latest</LangVersion>
+    <IsAotCompatible>true</IsAotCompatible>
     <PackageProjectUrl>https://github.com/stop-cran/ZabbixSender.Async</PackageProjectUrl>
-    <PackageLicenseFile>license.txt</PackageLicenseFile>
+    <PackageTags>zabbix;zabbix-sender;zabbix-trapper;trapper;monitoring;metrics;observability;telemetry;async</PackageTags>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="..\license.txt" Pack="true" PackagePath="\" />
     <None Include="..\README.md" Link="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\CHANGELOG.md" Link="CHANGELOG.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

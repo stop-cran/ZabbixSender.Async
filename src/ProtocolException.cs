@@ -3,7 +3,10 @@
 namespace ZabbixSender.Async
 {
     /// <summary>
-    /// Represents an error working with Zabbix sender protocol.
+    /// The exception thrown when the other side doesn't follow the Zabbix sender protocol: the port doesn't belong to
+    /// a Zabbix trapper, the connection closed before a complete response arrived, the response is malformed, or
+    /// <see cref="SenderResponse.Info"/> has an unexpected format. It is also thrown when a request or response
+    /// exceeds the protocol's 1 GB packet size limit.
     /// </summary>
     public sealed class ProtocolException : Exception
     {
