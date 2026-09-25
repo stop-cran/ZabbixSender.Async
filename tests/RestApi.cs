@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using Refit;
@@ -24,7 +25,9 @@ namespace ZabbixSender.Async.Tests
 
         public ZabbixApiClient(string url)
         {
-            api = RestService.For<IZabbixApi>(url);
+            var json = SystemTextJsonContentSerializer.GetDefaultJsonSerializerOptions();
+            json.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+            api = RestService.For<IZabbixApi>(url, new RefitSettings(new SystemTextJsonContentSerializer(json)));
         }
 
         public async Task Login(string username, string password, CancellationToken cancellationToken)
@@ -92,5 +95,11 @@ namespace ZabbixSender.Async.Tests
         public string Itemid { get; set; }
         public string Clock { get; set; }
         public string Value { get; set; }
+    }
+
+    public class ItemRecord
+    {
+        public string State { get; set; }
+        public string Error { get; set; }
     }
 }

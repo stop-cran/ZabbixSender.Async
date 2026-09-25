@@ -7,6 +7,55 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0-preview.2] - 2026-09-25
+
+### Fixed
+
+- `Send` no longer adds about 50 ms to every call. It used to poll for the reply every 50 ms; now
+  it reads the reply as soon as it arrives. Against a local Zabbix 7.4, a call dropped from about
+  63 ms to 7 ms.
+- Trimmed, Native AOT and .NET 10 file-based apps (`dotnet run app.cs`) can send values. Those apps
+  disable reflection-based JSON, so every `Send` used to throw `InvalidOperationException`.
+  Serialization now uses source-generated metadata, and the library is marked `IsAotCompatible`.
+- The whole reply is subject to the timeout. A reply that stalled after its first bytes used to
+  block `Send` until the caller cancelled.
+- If the server closes the connection before a complete reply, `Send` throws `ProtocolException`
+  at once. Before, it waited for the timeout.
+- Timeouts throw a `TaskCanceledException` whose `InnerException` is a `TimeoutException`. The
+  message says whether connecting or waiting for the reply timed out, and names the address.
+  Cancellation by the caller's token still throws a plain `OperationCanceledException`.
+- The connection is disposed when connecting fails or times out. It used to leak.
+- A `timeout` of 0 means no limit, like `Timeout.Infinite`. Before, it made every call fail.
+- `ParseInfo()` throws `ProtocolException`, instead of `OverflowException` or
+  `ArgumentNullException`, when `Info` is missing or has a count that doesn't fit in an `int`.
+
+### Changed
+
+- The `Sender` constructor throws `ArgumentOutOfRangeException` for a `timeout` below -1. Before,
+  such a value failed on every `Send`.
+- Package metadata:
+  - The licence is given as the `Apache-2.0` SPDX expression.
+  - The description and tags are more specific.
+  - The release notes link to this file at the release's tag.
+  - `CHANGELOG.md` is included in the package.
+
+### Added
+
+- Documentation for users and coding agents:
+  - The README covers result and error handling, timeouts, dependency injection, batching, value
+    formats, Zabbix setup, troubleshooting, limitations, and where to find the docs and source
+    of an installed version.
+  - The XML docs list the exceptions of every `Send` overload.
+  - `AGENTS.md` describes the repository conventions.
+- Tests:
+  - Unit tests of `Sender` against a fake server: timeouts, cancellation, connection errors,
+    concurrency and latency.
+  - Integration tests that pin which values Zabbix rejects: disabled hosts and items, *Allowed
+    hosts*, HTTP agent items without trapping, and hosts that require encryption. They also cover
+    values of the wrong type, Unicode text, a 10,000-value batch and HTTP agent items with
+    trapping.
+  - The tests run with reflection-based JSON disabled, as in Native AOT apps.
+
 ## [1.4.0-preview.1] - 2026-09-25
 
 ### Changed
@@ -93,7 +142,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Targets .NET Core 3.1. Earlier versions targeted .NET Standard 2.0 and .NET Framework 4.6.1.
 - Implements, and is tested against, the Zabbix 4.4 sender protocol.
 
-[Unreleased]: https://github.com/stop-cran/ZabbixSender.Async/compare/v1.4.0-preview.1...HEAD
+[Unreleased]: https://github.com/stop-cran/ZabbixSender.Async/compare/v1.4.0-preview.2...HEAD
+[1.4.0-preview.2]: https://github.com/stop-cran/ZabbixSender.Async/releases/tag/v1.4.0-preview.2
 [1.4.0-preview.1]: https://github.com/stop-cran/ZabbixSender.Async/releases/tag/v1.4.0-preview.1
 [1.3.0]: https://www.nuget.org/packages/ZabbixSender.Async/1.3.0
 [1.2.0]: https://www.nuget.org/packages/ZabbixSender.Async/1.2.0

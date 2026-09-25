@@ -1,28 +1,33 @@
 ﻿namespace ZabbixSender.Async
 {
     /// <summary>
-    /// Represents a response from Zabbix server on the data sent.
+    /// The Zabbix server's reply to a request.
     /// </summary>
     public class SenderResponse
     {
         /// <summary>
-        /// "success" in case of the request has succeeded.
+        /// "success" if the server processed the request, or "failed" if it rejected the request as a whole.
+        /// A "success" response can still contain rejected values: see <see cref="ParseInfo"/>.
         /// </summary>
         public string Response { get; set; }
 
         /// <summary>
-        /// Supplementary information. Can be parsed by ParseInfo() mwthod.
+        /// The processing summary, for example "processed: 1; failed: 0; total: 1; seconds spent: 0.000055".
+        /// Use <see cref="ParseInfo"/> to get the counters.
         /// </summary>
         public string Info { get; set; }
 
         /// <summary>
-        /// Whether the request has succeeded.
+        /// Whether <see cref="Response"/> is "success". It stays true when the server rejects some or all values:
+        /// check <see cref="SenderResponseInfo.Failed"/> from <see cref="ParseInfo"/>.
         /// </summary>
         public bool IsSuccess => Response == "success";
 
         /// <summary>
-        /// Supplementary information in a structured view.
+        /// Parses <see cref="Info"/> into counters.
         /// </summary>
+        /// <exception cref="ProtocolException"><see cref="Info"/> has an unexpected format, for example in a
+        /// "failed" response.</exception>
         public SenderResponseInfo ParseInfo() =>
             new SenderResponseInfo(Info);
     }

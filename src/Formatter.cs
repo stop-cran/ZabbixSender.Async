@@ -4,15 +4,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace ZabbixSender.Async
 {
     /// <summary>
-    /// An auxiliary class for Zabbix sender protocol 7.4 request and response formatting.
-    /// See full specs at https://www.zabbix.com/documentation/7.4/en/manual/appendix/protocols/zabbix_sender
+    /// The default <see cref="IFormatter"/>: formats requests and parses responses of the Zabbix sender protocol.
+    /// Requests are sent uncompressed as camelCase JSON. Responses may use zlib compression and the large packet
+    /// header. Packets are limited to 1 GB.
+    /// See https://www.zabbix.com/documentation/7.4/en/manual/appendix/protocols/zabbix_sender
     /// and https://www.zabbix.com/documentation/7.4/en/manual/appendix/protocols/header_datalen.
     /// </summary>
     public class Formatter : IFormatter
@@ -35,21 +37,24 @@ namespace ZabbixSender.Async
         private readonly JsonSerializerOptions _settings;
 
         /// <summary>
-        /// Initializes a new instance of the ZabbixSender.Async.Formatter class with custom JsonSerializerSettings.
+        /// Initializes a new instance of the ZabbixSender.Async.Formatter class with the default JSON settings:
+        /// camelCase property names, null properties omitted. They use source-generated serialization metadata,
+        /// so they work in trimmed and Native AOT applications.
         /// </summary>
         /// <param name="bufferSize">Stream buffer size.</param>
         public Formatter(int bufferSize = 1024) :
-            this(new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            }, bufferSize)
+            this(ZabbixJsonContext.Default.Options, bufferSize)
         { }
 
         /// <summary>
         /// Initializes a new instance of the ZabbixSender.Async.Formatter class.
         /// </summary>
-        /// <param name="settings">Custom Json serialization settings.</param>
+        /// <param name="settings">Custom JSON serialization settings. In trimmed and Native AOT applications, set
+        /// <see cref="JsonSerializerOptions.TypeInfoResolver"/> to a resolver that covers
+        /// <see cref="ZabbixDataMessage"/> and <see cref="SenderResponse"/>, for example a
+        /// <see cref="System.Text.Json.Serialization.JsonSerializerContext"/> with
+        /// <see cref="System.Text.Json.Serialization.JsonSerializableAttribute"/> for both types;
+        /// otherwise reading and writing throw <see cref="NotSupportedException"/>.</param>
         /// <param name="bufferSize">Stream buffer size.</param>
         public Formatter(JsonSerializerOptions settings, int bufferSize = 1024)
         {
@@ -67,7 +72,7 @@ namespace ZabbixSender.Async
             using (var ms = new MemoryStream())
             {
                 JsonSerializer.Serialize(
-                    ms, new ZabbixDataMessage("sender data", data, DateTimeOffset.UtcNow), _settings);
+                    ms, new ZabbixDataMessage("sender data", data, DateTimeOffset.UtcNow), GetTypeInfo<ZabbixDataMessage>());
 
                 stream.Write(CreateHeader(ms.Length));
 
@@ -88,7 +93,7 @@ namespace ZabbixSender.Async
             using (var ms = new MemoryStream())
             {
                 await JsonSerializer.SerializeAsync(
-                    ms, new ZabbixDataMessage("sender data", data, DateTimeOffset.UtcNow), _settings,
+                    ms, new ZabbixDataMessage("sender data", data, DateTimeOffset.UtcNow), GetTypeInfo<ZabbixDataMessage>(),
                     cancellationToken);
 
                 await stream.WriteAsync(CreateHeader(ms.Length), cancellationToken);
@@ -131,7 +136,8 @@ namespace ZabbixSender.Async
         /// </summary>
         /// <param name="stream">A stream to read from.</param>
         /// <param name="cancellationToken">CancellationToken for the read operation.</param>
-        /// <returns></returns>
+        /// <returns>The parsed response.</returns>
+        /// <exception cref="ProtocolException">The response is truncated or malformed.</exception>
         public async Task<SenderResponse> ReadResponseAsync(Stream stream, CancellationToken cancellationToken = default)
         {
             try
@@ -213,17 +219,20 @@ namespace ZabbixSender.Async
         {
             try
             {
-                return JsonSerializer.Deserialize<SenderResponse>(
+                return JsonSerializer.Deserialize(
                     packet.UncompressedLength is { } uncompressedLength
                         ? Decompress(payload, uncompressedLength)
                         : payload,
-                    _settings);
+                    GetTypeInfo<SenderResponse>());
             }
             catch (JsonException ex)
             {
                 throw new ProtocolException("invalid response format", ex);
             }
         }
+
+        private JsonTypeInfo<T> GetTypeInfo<T>() =>
+            (JsonTypeInfo<T>)_settings.GetTypeInfo(typeof(T));
 
         private static byte[] Decompress(byte[] payload, int uncompressedLength)
         {

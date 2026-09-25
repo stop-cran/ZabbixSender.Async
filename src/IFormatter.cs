@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 namespace ZabbixSender.Async
 {
     /// <summary>
-    /// An auxiliary interface which abstracts working with Zabbix sender protocol.
+    /// Writes requests and reads responses in the Zabbix sender protocol wire format. <see cref="Formatter"/> is the
+    /// default implementation; implement this interface and pass it to <see cref="SenderSkeleton"/> only to change
+    /// the wire format.
     /// </summary>
     public interface IFormatter
     {
@@ -21,7 +23,7 @@ namespace ZabbixSender.Async
         /// </summary>
         /// <param name="stream">A stream to read from.</param>
         /// <param name="cancellationToken">CancellationToken for the read operation.</param>
-        /// <returns></returns>
+        /// <returns>The parsed response.</returns>
         Task<SenderResponse> ReadResponseAsync(Stream stream, CancellationToken cancellationToken = default);
 
         /// <summary>

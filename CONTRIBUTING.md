@@ -12,11 +12,19 @@ dotnet build
 dotnet test --filter "TestCategory!=Integration"   # unit tests only, no Zabbix needed
 ```
 
+The unit tests run `Sender` against `FakeZabbixServer`, a loopback server in the test project, so
+timeouts, dropped connections and malformed replies can be tested without Zabbix. The test project
+disables reflection-based JSON serialization, as trimmed and Native AOT apps do, so the whole suite
+also checks AOT compatibility.
+
 The integration tests (`[Category("Integration")]`) run the whole flow against a real Zabbix server:
 
 1. Create a host group, host and trapper item through the JSON-RPC API.
 2. Send values with `Sender`.
 3. Read the values back from history.
+
+They also check which values Zabbix rejects, for example for disabled items or a mismatched
+*Allowed hosts*, so the README's error table stays accurate.
 
 [compose.yaml](compose.yaml) starts Zabbix with PostgreSQL:
 
@@ -39,6 +47,9 @@ they create gets a unique name and is deleted afterwards.
 `src/ZabbixSender.Async.xml` is generated from the XML doc comments on build. It is committed, so
 commit it whenever the doc comments change.
 
+[AGENTS.md](AGENTS.md) lists the repository layout and conventions in one place, for people and
+coding agents alike.
+
 ## Continuous integration
 
 [ci.yml](.github/workflows/ci.yml) runs on every pull request and every push to `master`:
@@ -60,8 +71,8 @@ no API key.
 
 To release version `X.Y.Z`, or a preview such as `X.Y.Z-preview.N`:
 
-1. Set `<Version>` in [src/ZabbixSender.Async.csproj](src/ZabbixSender.Async.csproj), and update
-   `<PackageReleaseNotes>` if needed.
+1. Set `<Version>` in [src/ZabbixSender.Async.csproj](src/ZabbixSender.Async.csproj).
+   `<PackageReleaseNotes>` links to this version's section of the changelog on its own.
 2. In [CHANGELOG.md](CHANGELOG.md), move the entries under `## [Unreleased]` into a new
    `## [X.Y.Z] - YYYY-MM-DD` section, and update the link references at the bottom. The section
    becomes the GitHub release notes, and the release fails if the section is missing or empty.
