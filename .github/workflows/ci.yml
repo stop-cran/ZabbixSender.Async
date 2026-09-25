@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  # Publishing lives in release.yml and is reachable only by pushing a tag. This job fails the
+  # build if any workflow could publish from a branch, a pull request or a manual dispatch.
+  publication-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Only tags may publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check pyyaml
+          python3 tools/check-publication-triggers.py
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Workflows must be valid
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GitHub reports an invalid workflow as a bare failure with no job and no log, and the
+          # publication gate above accepts files Actions rejects, so validate them explicitly.
+          version=1.7.12
+          curl -sSLo /tmp/actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_linux_amd64.tar.gz"
+          tar -xzf /tmp/actionlint.tar.gz -C /tmp actionlint
+          /tmp/actionlint -no-color -oneline
+          echo "workflows are valid"
+
+  build:
+    name: build (Zabbix ${{ matrix.zabbix }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # The latest stable release and the current LTS.
+        zabbix: ['7.4', '7.0']
+    env:
+      ZABBIX_VERSION: ${{ matrix.zabbix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Start Zabbix ${{ matrix.zabbix }}
+        run: docker compose up -d
+
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: >-
+          dotnet test --no-build -c Release
+          -l "junit;LogFilePath=test-results.xml"
+          -p:CollectCoverage=true
+          -p:CoverletOutputFormat=lcov
+
+      - name: Zabbix logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
+        if: always()
+        with:
+          check_name: Test results (Zabbix ${{ matrix.zabbix }})
+          comment_mode: off
+          files: tests/test-results.xml
+
+      - name: Publish coverage to coveralls.io
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        if: matrix.zabbix == '7.4'
+        with:
+          file: tests/coverage.info
+          format: lcov
+          fail-on-error: false

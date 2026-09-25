@@ -6,8 +6,9 @@
     <members>
         <member name="T:ZabbixSender.Async.Formatter">
             <summary>
-            An auxiliary class for Zabbix sender protocol 4.4 request and response formatting.
-            See full specs at https://zabbix.org/wiki/Docs/protocols/zabbix_sender/4.4.
+            An auxiliary class for Zabbix sender protocol 7.4 request and response formatting.
+            See full specs at https://www.zabbix.com/documentation/7.4/en/manual/appendix/protocols/zabbix_sender
+            and https://www.zabbix.com/documentation/7.4/en/manual/appendix/protocols/header_datalen.
             </summary>
         </member>
         <member name="M:ZabbixSender.Async.Formatter.#ctor(System.Int32)">
@@ -108,7 +109,7 @@
             Send a single data item for specified host.
             </summary>
             <param name="host"></param>
-            <param name="key">An item key (see https://www.zabbix.com/documentation/4.4/manual/config/items/item/key).</param>
+            <param name="key">An item key (see https://www.zabbix.com/documentation/7.4/en/manual/config/items/item/key).</param>
             <param name="value">An item value</param>
             <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
         </member>
@@ -118,6 +119,17 @@
             </summary>
             <param name="data">Data items to send</param>
             <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        </member>
+        <member name="T:ZabbixSender.Async.JsonUnixDateTime">
+            <summary>
+            Converts <see cref="T:System.DateTimeOffset"/> values to and from Unix time in seconds.
+            </summary>
+        </member>
+        <member name="M:ZabbixSender.Async.JsonUnixDateTime.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <inheritdoc />
+        </member>
+        <member name="M:ZabbixSender.Async.JsonUnixDateTime.Write(System.Text.Json.Utf8JsonWriter,System.DateTimeOffset,System.Text.Json.JsonSerializerOptions)">
+            <inheritdoc />
         </member>
         <member name="T:ZabbixSender.Async.ProtocolException">
             <summary>
@@ -274,7 +286,7 @@
             Send a single data item for specified host.
             </summary>
             <param name="host"></param>
-            <param name="key">An item key (see https://www.zabbix.com/documentation/4.4/manual/config/items/item/key).</param>
+            <param name="key">An item key (see https://www.zabbix.com/documentation/7.4/en/manual/config/items/item/key).</param>
             <param name="value">An item value</param>
             <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
         </member>
@@ -284,6 +296,36 @@
             </summary>
             <param name="data">Data items to send</param>
             <param name="cancellationToken">A CancellationToken for an overall request processing.</param>
+        </member>
+        <member name="T:ZabbixSender.Async.ZabbixDataMessage">
+            <summary>
+            A Zabbix sender protocol request message.
+            </summary>
+            <param name="Request">The request type, "sender data" for the sender protocol.</param>
+            <param name="Data">Data items to send.</param>
+            <param name="Clock">The request timestamp.</param>
+        </member>
+        <member name="M:ZabbixSender.Async.ZabbixDataMessage.#ctor(System.String,System.Collections.Generic.IEnumerable{ZabbixSender.Async.SendData},System.DateTimeOffset)">
+            <summary>
+            A Zabbix sender protocol request message.
+            </summary>
+            <param name="Request">The request type, "sender data" for the sender protocol.</param>
+            <param name="Data">Data items to send.</param>
+            <param name="Clock">The request timestamp.</param>
+        </member>
+        <member name="P:ZabbixSender.Async.ZabbixDataMessage.Request">
+            <summary>The request type, "sender data" for the sender protocol.</summary>
+        </member>
+        <member name="P:ZabbixSender.Async.ZabbixDataMessage.Data">
+            <summary>Data items to send.</summary>
+        </member>
+        <member name="M:ZabbixSender.Async.ZabbixDataMessage.ToString">
+            <inheritdoc />
+        </member>
+        <member name="P:ZabbixSender.Async.ZabbixDataMessage.Clock">
+            <summary>
+            The request timestamp, serialized as Unix time in seconds.
+            </summary>
         </member>
     </members>
 </doc>

@@ -1,27 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <Version>1.3.0</Version>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Copyright>Apache License 2.0 (stop-cran, 2018-2025)</Copyright>
+    <TargetFramework>net10.0</TargetFramework>
+    <Version>1.4.0-preview.1</Version>
+    <Copyright>Apache License 2.0 (stop-cran, 2018-2026)</Copyright>
     <Authors>stop-cran &lt;stop-cran@list.ru&gt;</Authors>
     <Company>stop-cran &lt;stop-cran@list.ru&gt;</Company>
     <RepositoryUrl>https://github.com/stop-cran/ZabbixSender.Async</RepositoryUrl>
-    <PackageReleaseNotes>Added .Net 9.</PackageReleaseNotes>
-    <Description>A tool to send data to Zabbix in the same way as zabbix_sender tool. It implements Zabbix Sender Protocol 4.0.</Description>
+    <PackageReleaseNotes>Migrated to .NET 10 and Zabbix 7.4. See https://github.com/stop-cran/ZabbixSender.Async/blob/master/CHANGELOG.md for details.</PackageReleaseNotes>
+    <Description>A tool to send data to Zabbix in the same way as zabbix_sender tool. It implements Zabbix sender protocol 7.4.</Description>
     <DocumentationFile>ZabbixSender.Async.xml</DocumentationFile>
     <LangVersion>latest</LangVersion>
     <PackageProjectUrl>https://github.com/stop-cran/ZabbixSender.Async</PackageProjectUrl>
     <PackageLicenseFile>license.txt</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>

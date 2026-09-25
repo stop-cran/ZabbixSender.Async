@@ -8,36 +8,47 @@ namespace ZabbixSender.Async.Tests
     public interface IZabbixApi
     {
         [Post("")]
-        Task<IApiResponse<ZabbixResponse<TResponse>>> Rpc<TRequest, TResponse>([Body] ZabbixRequest<TRequest> body,
-            CancellationToken cancellationToken);
+        Task<ZabbixResponse<TResponse>> Rpc<TRequest, TResponse>([Body] ZabbixRequest<TRequest> body,
+            [Header("Authorization")] string authorization, CancellationToken cancellationToken);
     }
 
-    public static class ZabbixApiExtensions
-    {
-        public static ZabbixTask<T> Request<T>(this IZabbixApi api, T request, string method, string auth) =>
-            new(api, new()
-            {
-                Params = request,
-                Method = method,
-                Auth = auth,
-                Id = 1
-            });
-    }
-
-    public class ZabbixTask<T>
+    /// <summary>
+    /// A minimal Zabbix 7.x JSON-RPC API client.
+    /// Since Zabbix 7.2 the session token is passed in the Authorization header rather than the "auth" property.
+    /// </summary>
+    public class ZabbixApiClient
     {
         private readonly IZabbixApi api;
-        private readonly ZabbixRequest<T> request;
+        private string authorization;
+        private int id;
 
-        public ZabbixTask(IZabbixApi api, ZabbixRequest<T> request)
+        public ZabbixApiClient(string url)
         {
-            this.api = api;
-            this.request = request;
+            api = RestService.For<IZabbixApi>(url);
         }
 
-        public async Task<IApiResponse<ZabbixResponse<TResponse>>> As<TResponse>(
-            CancellationToken cancellationToken) =>
-            await api.Rpc<T, TResponse>(request, cancellationToken);
+        public async Task Login(string username, string password, CancellationToken cancellationToken)
+        {
+            var token = await Call<string>("user.login", new { username, password }, cancellationToken);
+
+            authorization = "Bearer " + token;
+        }
+
+        public async Task<T> Call<T>(string method, object parameters, CancellationToken cancellationToken)
+        {
+            var response = await api.Rpc<object, T>(new ZabbixRequest<object>
+            {
+                Method = method,
+                Params = parameters,
+                Id = Interlocked.Increment(ref id)
+            }, method is "user.login" or "apiinfo.version" ? null : authorization, cancellationToken);
+
+            if (response.Error != null)
+                throw new InvalidOperationException(
+                    $"Zabbix API call {method} has failed: {response.Error.Message} {response.Error.Data}");
+
+            return response.Result;
+        }
     }
 
     public class ZabbixRequest<T>
@@ -46,12 +57,24 @@ namespace ZabbixSender.Async.Tests
         public string Method { get; set; }
         public T Params { get; set; }
         public int Id { get; set; }
-        public string Auth { get; set; }
     }
 
     public class ZabbixResponse<T>
     {
         public T Result { get; set; }
+        public ZabbixError Error { get; set; }
+    }
+
+    public class ZabbixError
+    {
+        public int Code { get; set; }
+        public string Message { get; set; }
+        public string Data { get; set; }
+    }
+
+    public class HostGroupResponse
+    {
+        public string[] Groupids { get; set; }
     }
 
     public class HostResponse
@@ -62,5 +85,12 @@ namespace ZabbixSender.Async.Tests
     public class ItemResponse
     {
         public string[] Itemids { get; set; }
+    }
+
+    public class HistoryRecord
+    {
+        public string Itemid { get; set; }
+        public string Clock { get; set; }
+        public string Value { get; set; }
     }
 }
